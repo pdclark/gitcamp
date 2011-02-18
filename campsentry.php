@@ -22,9 +22,11 @@ class Campsentry
     Zend_Loader::loadClass('Zend_Http_Client');
     Zend_Loader::loadClass('Zend_Cache');
     Zend_Loader::loadClass('Zend_Db');
-    include_once(APPLICATION_PATH . '/connectors/api.php');
-    include_once(APPLICATION_PATH . '/connectors/db.php');
-    include_once(APPLICATION_PATH . '/lib/bc.php');
+    include_once(APPLICATION_PATH . '/connectors/api_connector.php');
+    include_once(APPLICATION_PATH . '/connectors/db_connector.php');
+    include_once(APPLICATION_PATH . '/lib/basecamp.php');
+    include_once(APPLICATION_PATH . '/models/cache_model.php');
+    include_once(APPLICATION_PATH . '/models/db_model.php');
   }
  
   public function run()
@@ -46,7 +48,7 @@ class Campsentry
   public function cli_arguments($command)
   {
 
-    $basecamp = new Bc();
+    $basecamp = new Basecamp();
 
     switch ($command[0]) {
       case 'list':
@@ -61,30 +63,6 @@ class Campsentry
     }
   }
 
-  public function save_db()
-  {
-    $connect = $this->db_connect();  
-    $sql = 'SELECT * FROM cs_commits';
-    $result = $connect->fetchAll($sql, 2);
-    print_r($result);
-  }
-
-  public function get_project()
-  {
-
-  }
-
-  public function set_project($project)
-  {
-    $frontendOptions = array('lifetime' => NULL);
-    $backendOptions = array('cache_dir' => 'tmp');
-    $cache = Zend_Cache::factory('Output', 'File', $frontendOptions, $backendOptions);
-    if( ($project = $cache->load('project')) === false ) 
-    {
-      $project = "bar";
-      $cache->save($project, 'project');
-    }
-  }
 }
 
 $foo = new Campsentry();
