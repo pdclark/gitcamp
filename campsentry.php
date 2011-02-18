@@ -30,7 +30,7 @@ class Campsentry
     Zend_Loader::loadClass('Zend_Db');
 
     // Get config items using Zend config
-    // $this->config = new Zend_Config_Ini('/home/john/utils/campsentry/config/config.ini', 'account');
+    // $this->config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'account');
 
     // Get commands from the CLI
     $this->opts = new Zend_Console_Getopt('abp:');
@@ -39,8 +39,20 @@ class Campsentry
  
   public function cli_arguments()
   {
-    
+    $this->opts = new Zend_Console_Getopt('abp:');
+    $command = $this->opts->getRemainingArgs();
 
+    switch ($command[0]) {
+      case 'test':
+        echo "i equals 0\n";
+        break;
+      case 'test1':
+        echo "i equals 1\n";
+        break;
+      case 'test2':
+        echo "i equals 2\n";
+        break;
+    }
   }
 
   /** 
@@ -108,9 +120,7 @@ class Campsentry
   }
 }
 
-// $foo = new Campsentry();
 $foo = new Campsentry();
-$foo->save_db();
-// print_r($foo);
+$foo->cli_arguments();
 
 ?>
