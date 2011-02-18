@@ -30,11 +30,25 @@ class Campsentry
     Zend_Loader::loadClass('Zend_Db');
   }
  
-  public function cli_arguments()
+
+  public function run()
   {
     $this->opts = new Zend_Console_Getopt('abp:');
     $command = $this->opts->getRemainingArgs();
+    
+    if(!isset($command[0]))
+    {
+      echo "Enter a command\n";
+    }
+    else
+    {
+      $this->cli_arguments($command);
+    }
 
+  }
+
+  public function cli_arguments($command)
+  {
     switch ($command[0]) {
       case 'list':
         $this->list_projects();
@@ -118,6 +132,6 @@ class Campsentry
 }
 
 $foo = new Campsentry();
-$foo->cli_arguments();
+$foo->run();
 
 ?>
