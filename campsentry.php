@@ -33,6 +33,7 @@ class Campsentry
   {
     $this->opts = new Zend_Console_Getopt('abp:');
     $command = $this->opts->getRemainingArgs();
+    $basecamp = new Basecamp();
     
     if(!isset($command[0]))
     {
@@ -40,29 +41,20 @@ class Campsentry
     }
     else
     {
-      $this->cli_arguments($command);
-    }
-
-  }
-
-  public function cli_arguments($command)
-  {
-
-    $basecamp = new Basecamp();
-
-    switch ($command[0]) {
-      case 'list':
-        $this->list_projects();
-        break;
-      case 'set':
-        $this->set_project();
-        break;
-      case 'debug':
-        $basecamp->list_projects();
-        break;
+      switch ($command[0]) 
+      {
+        case 'list':
+          $this->list_projects();
+          break;
+        case 'set':
+          $this->set_project();
+          break;
+        case 'debug':
+          $basecamp->list_projects();
+          break;
+      }
     }
   }
-
 }
 
 $foo = new Campsentry();
