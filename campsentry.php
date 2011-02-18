@@ -22,12 +22,11 @@ class Campsentry
     Zend_Loader::loadClass('Zend_Http_Client');
     Zend_Loader::loadClass('Zend_Cache');
     Zend_Loader::loadClass('Zend_Db');
-    include_once(APPLICATION_PATH . '/lib/api.php');
-    include_once(APPLICATION_PATH . '/lib/db.php');
+    include_once(APPLICATION_PATH . '/connectors/api.php');
+    include_once(APPLICATION_PATH . '/connectors/db.php');
     include_once(APPLICATION_PATH . '/lib/bc.php');
   }
  
-
   public function run()
   {
     $this->opts = new Zend_Console_Getopt('abp:');
@@ -68,6 +67,11 @@ class Campsentry
     $sql = 'SELECT * FROM cs_commits';
     $result = $connect->fetchAll($sql, 2);
     print_r($result);
+  }
+
+  public function get_project()
+  {
+
   }
 
   public function set_project($project)
