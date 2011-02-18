@@ -36,11 +36,11 @@ class Campsentry
     $command = $this->opts->getRemainingArgs();
 
     switch ($command[0]) {
-      case 'test':
+      case 'list':
         $this->list_projects();
         break;
-      case 'test1':
-        echo "i equals 1\n";
+      case 'set':
+        $this->set_project();
         break;
       case 'test2':
         echo "i equals 2\n";
@@ -51,7 +51,7 @@ class Campsentry
   public function list_projects()
   {
 
-    $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'account');
+    $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'api');
     $client = new Zend_Http_Client();
     $client->setAuth($config->basecamp->token, 'myPassword!');
     $client->setUri($config->basecamp->uri->base.$config->basecamp->uri->listprojects);
@@ -60,15 +60,19 @@ class Campsentry
 
     if ($response->getStatus() == 200) 
     {
-      echo "The request returned the following information:<br />";
+      echo "Success\n";
       $data = simplexml_load_string($response->getBody());
-      $id = (string) $data->project[1]->name;
-      print_r($id);
+      foreach($data as $row)
+      {
+        echo (string) $row->id[0] . ":" . $row->name[0]  . "\n";
+      }
+      // $id = $data->project->name;
+      // print_r($id) . "\n";
     } 
     else 
     { 
-      echo "An error occurred while fetching data:<br />";
-      echo $response->getStatus() . ": " . $response->getMessage();
+      echo "Failure\n";
+      echo $response->getStatus() . ": " . $response->getMessage() . "\n";
     }
   }
 
