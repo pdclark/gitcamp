@@ -1,6 +1,6 @@
 <?php
 
-Class DB
+Class Db_connector
 {
 
   public function db_connect()

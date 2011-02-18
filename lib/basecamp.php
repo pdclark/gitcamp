@@ -1,6 +1,6 @@
 <?php
 
-Class Bc 
+Class Basecamp 
 {
 
   public function list_projects()

@@ -1,6 +1,6 @@
 <?php
 
-Class Api
+Class Api_connector
 {
 
   public function api_connect($call)
