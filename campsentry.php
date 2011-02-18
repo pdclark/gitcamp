@@ -28,13 +28,6 @@ class Campsentry
     Zend_Loader::loadClass('Zend_Http_Client');
     Zend_Loader::loadClass('Zend_Cache');
     Zend_Loader::loadClass('Zend_Db');
-
-    // Get config items using Zend config
-    // $this->config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'account');
-
-    // Get commands from the CLI
-    $this->opts = new Zend_Console_Getopt('abp:');
-    $this->client = new Zend_Http_Client();
   }
  
   public function cli_arguments()
@@ -44,7 +37,7 @@ class Campsentry
 
     switch ($command[0]) {
       case 'test':
-        echo "i equals 0\n";
+        $this->list_projects();
         break;
       case 'test1':
         echo "i equals 1\n";
@@ -55,11 +48,12 @@ class Campsentry
     }
   }
 
-  /** 
-  public fucntion cli_arguments();
+  public function list_projects()
   {
-    $args = $this->opts->getRemainingArgs();
-    $client->setAuth($config->token, 'myPassword!');
+
+    $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'account');
+    $client = new Zend_Http_Client();
+    $client->setAuth($config->basecamp->token, 'myPassword!');
     $client->setUri($config->basecamp->uri->base.$config->basecamp->uri->listprojects);
     $client->request('GET');
     $response = $client->request();
@@ -77,7 +71,6 @@ class Campsentry
       echo $response->getStatus() . ": " . $response->getMessage();
     }
   }
-  **/
 
   public function db_connect()
   {
