@@ -80,8 +80,6 @@ class Campsentry
       {
         echo (string) $row->id[0] . ":" . $row->name[0]  . "\n";
       }
-      // $id = $data->project->name;
-      // print_r($id) . "\n";
     } 
     else 
     { 
@@ -118,15 +116,15 @@ class Campsentry
     print_r($result);
   }
 
-  public function save_cache()
+  public function set_project($project)
   {
     $frontendOptions = array('lifetime' => NULL);
     $backendOptions = array('cache_dir' => 'tmp');
     $cache = Zend_Cache::factory('Output', 'File', $frontendOptions, $backendOptions);
-    if( ($result = $cache->load('myresult')) === false ) 
+    if( ($project = $cache->load('project')) === false ) 
     {
-      $result = "bar";
-      $cache->save($result, 'myresult');
+      $project = "bar";
+      $cache->save($project, 'project');
     }
   }
 }
