@@ -34,6 +34,8 @@ class Campsentry
     $this->opts = new Zend_Console_Getopt('abp:');
     $command = $this->opts->getRemainingArgs();
     $basecamp = new Basecamp();
+
+    $cache = new Cache_model();
     
     if(!isset($command[0]))
     {
@@ -47,7 +49,7 @@ class Campsentry
           $basecamp->list_projects();
           break;
         case 'set':
-          $this->set_project();
+          $cache->set_project($command[1]);
           break;
         case 'debug':
           $basecamp->list_projects();

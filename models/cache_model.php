@@ -13,11 +13,7 @@ class Cache_model
     $frontendOptions = array('lifetime' => NULL);
     $backendOptions = array('cache_dir' => 'tmp');
     $cache = Zend_Cache::factory('Output', 'File', $frontendOptions, $backendOptions);
-    if( ($project = $cache->load('project')) === false ) 
-    {
-      $project = "bar";
-      $cache->save($project, 'project');
-    }
+    $cache->save($project, 'project');
   }
 
 }
