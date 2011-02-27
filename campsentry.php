@@ -17,11 +17,14 @@ class Campsentry
 
   public function __construct()
   {
+    // Load Zend Classes
     Zend_Loader::loadClass('Zend_Console_Getopt');
     Zend_Loader::loadClass('Zend_Config_Ini');
     Zend_Loader::loadClass('Zend_Http_Client');
     Zend_Loader::loadClass('Zend_Cache');
     Zend_Loader::loadClass('Zend_Db');
+    
+    // Locad app files
     include_once(APPLICATION_PATH . '/connectors/api_connector.php');
     include_once(APPLICATION_PATH . '/connectors/db_connector.php');
     include_once(APPLICATION_PATH . '/lib/basecamp.php');
@@ -41,15 +44,24 @@ class Campsentry
     {
       echo "Enter a command\n";
     }
-    else
+    elseif($command[0] === "project")
     {
-      switch ($command[0]) 
+
+      if(!isset($command[1]))
+      {
+        $command[1] = '';
+      }
+
+      switch ($command[1]) 
       {
         case 'list':
           $basecamp->list_projects();
           break;
         case 'set':
-          $cache->set_project($command[1]);
+          $cache->set_project($command[2]);
+          break;
+        case 'show':
+          $cache->get_project();
           break;
         case 'debug':
           $basecamp->list_projects();
