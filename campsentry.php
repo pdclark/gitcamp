@@ -44,7 +44,7 @@ class Campsentry
       switch ($command[0]) 
       {
         case 'list':
-          $this->list_projects();
+          $basecamp->list_projects();
           break;
         case 'set':
           $this->set_project();
