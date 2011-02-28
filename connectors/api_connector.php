@@ -8,7 +8,7 @@ Class Api_connector
     $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'api');
     $client = new Zend_Http_Client();
     $client->setAuth($config->basecamp->token, 'myPassword!');
-    $client->setUri($config->basecamp->uri->base.$config->basecamp->uri->$call);
+    $client->setUri($config->basecamp->uri->base.$call);
     $client->request('GET');
     $response = $client->request();
 

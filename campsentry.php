@@ -66,6 +66,36 @@ class Campsentry
         case 'debug':
           $basecamp->list_projects();
           break;
+        default:
+          $basecamp->get_project();
+          break;
+      }
+    }
+    elseif($command[0] === "todolist")
+    {
+
+      if(!isset($command[1]))
+      {
+        $command[1] = '';
+      }
+
+      switch ($command[1]) 
+      {
+        case 'list':
+          $basecamp->project_get_all_lists($command[2]);
+          break;
+        case 'set':
+          $cache->set_project($command[2]);
+          break;
+        case 'show':
+          $cache->get_project();
+          break;
+        case 'debug':
+          $basecamp->list_projects();
+          break;
+        default:
+          $basecamp->get_project();
+          break;
       }
     }
   }

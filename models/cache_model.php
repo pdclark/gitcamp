@@ -21,6 +21,7 @@ class Cache_model
     else
     {
       echo $this->cache->load('project')."\n";
+      return $this->cache->load('project')."\n";
     }
   }
 
