@@ -54,30 +54,38 @@ class Campsentry
 		$this->opts = new Zend_Console_Getopt('abp:');
 		if ( empty($this->args) ) { $this->args = $this->opts->getRemainingArgs(); }
 		
+		$this->project = $this->cache->get_project( $this->basecamp );
+		$this->project_list = $this->cache->get_project_list( $this->basecamp );
+		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
+		
 		$method = $this->args[0];
 		if ( method_exists($this, $method ) ) {
 			$this->$method();
 		}
-		
-		$this->project = $this->cache->get_project( $this->basecamp );
-		$this->project_list = $this->cache->get_project_list( $this->basecamp );
 		
 		if ( empty( $this->project ) ) {
 			$this->set_project();
 			$this->run();
 			exit;
 		}else {
-			$this->todo_index = $this->cache->get_todo_index( $this->project['id'], $this->basecamp );
+			
 			$this->set_todo_index();
 			echo "\n** {$this->project['name']} ** active.\nChange with $this->script_name reload.\n\n";
 		}
+
+		$this->clear();
+		$this->tasks = $this->cache->get_tasks( $this->project['id'], $this->active_todo_list['id'], $this->basecamp );
 		
-		if (empty( $this->tasks ) ) {
-			$this->set_tasks();
+		
+		foreach ($this->tasks as $key => $t ) {
+			extract($t);
+			// echo "[$id] $content\n";
+			$copy .= "[$id] $content \n";
 		}
+		exec('echo "'.$copy.'" | mate;');
 		
 		
-		exit;
+		exit(0);
 		
 		/*
 
@@ -165,6 +173,11 @@ class Campsentry
 		}*/
 	}
 	
+	public function project() {
+		$this->active_todo_list = $this->cache->set_active_todo_list( null );
+		$this->set_project();
+	}
+	
 	public function set_project() {
 		foreach ($this->project_list as $key => $p ) {
 			echo "[$key] {$p['name']}\n";
@@ -175,10 +188,13 @@ class Campsentry
 	}
 	
 	public function set_todo_index() {
+		
+		$this->todo_index = $this->cache->get_todo_index( $this->project['id'], $this->basecamp );
+		
 		if ( empty( $this->todo_index ) ) {
 			echo "All todo lists for {$this->project['name']} are complete.\n\n";
-			$this->cache->set_project(null);
-			$this->cache->set_todo_index(null);
+			$this->cache->set_project(null, $this->basecamp);
+			$this->cache->set_todo_index(null, $this->basecamp);
 			$this->run();
 			exit;
 		}
@@ -199,9 +215,12 @@ class Campsentry
 	}
 	
 	public function reload() {
-		$this->cache->set_project_list(null);
-		$this->cache->set_project(null);
+		$this->cache->set_project_list(null, $this->basecamp);
+		$this->cache->set_project(null, $this->basecamp);
+		$this->project_list = $this->cache->set_project_list( null, $this->basecamp );
+		$this->active_todo_list = $this->cache->set_active_todo_list( null, $this->basecamp );
 		$this->args[0] = null;
+		$this->run();
 	}
 	
 	public function input($prompt) {

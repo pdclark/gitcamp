@@ -59,21 +59,26 @@ Class Basecamp
 		return $list;
 	}
 
-	public function get_active_todo_items($project, $active_todo) {
-		$list = $active_todo['id'];
-		print_r($active_todo);
-		echo $call;
-		$call = '/projects/'.$project.'/todo_lists/'.$list.'.xml';
+	public function get_tasks($project, $active_todo_id) {
+		$tasks = array();
+		$call = '/projects/'.$project.'/todo_lists/'.$active_todo_id.'.xml';
 		$data = $this->connect->api_connect($call);
-		if(is_object($data))
-		{
-			foreach($data->{'todo-items'}[0] as $row)
-			{
-		// print_r($row);
-		if ($row->completed == 'false') {			
-			echo (string) $row->id . ":" . $row->content	. "\n";
-		}
+		if(is_object($data)) {
+			
+			foreach($data->{'todo-items'}[0] as $row) {
+				if ( (string) $row->completed == 'false') {
+				
+					$tasks[] = array(
+						'content'=> (string) $row->content[0],
+						'id'=> (int) $row->id[0],
+						'position' => (int) $row->position[0],
+						'comments_count' => (int) $row->{'comments-count'}[0],
+					);
+					
+				}
 			}
+
+			return $tasks;
 		}
 	}
 }

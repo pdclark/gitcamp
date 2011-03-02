@@ -70,15 +70,11 @@ class Cache_model
 	public function get_active_todo_list($project_id, $basecamp)
 	{
 		$result = unserialize($this->cache->load( 'active_todo_'.$project_id ));
-		if ( !empty($result) && false ) {
+		if ( !empty($result) ) {
 			return $result;
 		}else {
-			echo "Loading tasks... \n\n";
-			$active_todo = $basecamp->get_active_todo_items( $project_id, $active_todo );
-
-			$this->set_active_todo_items($project_id, $active_todo);
-
-			return $active_todo;
+			return false;
+			// echo 'Do something here...';
 		}
 	}
 	
@@ -86,7 +82,30 @@ class Cache_model
 	{
 		$this->cache->save( serialize($active_todo), 'active_todo_'.$project_id );
 	}
+	
+	
+	public function get_tasks($project_id, $active_todo_id, $basecamp)
+	{
+		$result = unserialize($this->cache->load( 'tasks_'.$project_id.$active_todo_id ));
+		if ( !empty($result) ) {
+			return $result;
+		}else {
+			echo "Loading tasks... \n\n";
+			$tasks = $basecamp->get_tasks( $project_id, $active_todo_id );
 
+			$this->set_tasks($project_id, $active_todo_id, $tasks);
+
+			return $tasks;
+		}
+	}
+	
+	public function set_tasks($project_id, $active_todo_id, $tasks)
+	{
+		$this->cache->save( serialize($tasks), 'tasks_'.$project_id.$active_todo_id );
+	}
+	
+	
+	
 
 }
 
