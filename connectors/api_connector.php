@@ -7,14 +7,14 @@ Class Api_connector
   {
     $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'api');
     $client = new Zend_Http_Client();
-    $client->setAuth($config->basecamp->token, 'myPassword!');
+    $client->setAuth($config->basecamp->token, 'password');
     $client->setUri($config->basecamp->uri->base.$call);
     $client->request('GET');
     $response = $client->request();
 
     if ($response->getStatus() == 200) 
     {
-      echo "Success\n";
+      // echo "Success\n";
       return simplexml_load_string($response->getBody());
     } 
     else 
