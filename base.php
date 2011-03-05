@@ -134,25 +134,10 @@ class Base {
 		$this->config();
 		
 		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
-		
-		$method = $this->args[0];
-		if ( method_exists($this, $method ) ) {
-			$this->$method();
-		}
-		
-		$this->set_todo_index();
-		echo "\n** {$this->projectname} ** active.\nChange with $this->script_name reload.\n\n";
-
-		$this->clear();
+		$this->get_todo_index();
 		$this->tasks = $this->cache->get_tasks( $this->projectid, $this->active_todo_list['id'], $this->basecamp );
 		
-		foreach ($this->tasks as $key => $t ) {
-			extract($t);
-			// echo "[$id] $content\n";
-			$copy .= "[$id] $content \n";
-		}
-		exec('echo "'.$copy.'" | mate;');
-		
+		$this->output_tasks();
 		
 		exit(0);
 
@@ -174,6 +159,17 @@ class Base {
 		echo  "\n".$pad2."$reload: [p]roject  [t]odo lists  [s]ubdomain  [a]pi \n";
 	}
 	
+	public function output_tasks() {
+		// Load Tasks
+		foreach ($this->tasks as $key => $task ) {
+			extract($task);
+			$out .= "[$id] $content \n";
+		}
+		// exec('echo "'.$out.'" | mate;');
+	
+		exec('echo "'.$out.'" | git commit --edit --file -');
+	}
+	
 	public function project() {
 		$this->active_todo_list = $this->cache->set_active_todo_list( null );
 		$this->set_project();
@@ -188,7 +184,7 @@ class Base {
 		$this->cache->set_project( $this->project_list[$key] );
 	}
 	
-	public function set_todo_index() {
+	public function get_todo_index() {
 		
 		$this->todo_index = $this->cache->get_todo_index( $this->projectid, $this->basecamp );
 		
@@ -206,7 +202,7 @@ class Base {
 		}
 		echo "\n";
 		
-		$key = $this->input('Which todo list?');
+		$key = $this->input('Commit which todo list?');
 		$this->active_todo_list = $this->todo_index[$key];
 
 		$this->cache->set_active_todo_list( $this->project, $this->active_todo_list );
