@@ -133,8 +133,14 @@ class Base {
 
 		$this->config();
 		
-		if ( $this->args[0] == 'complete_tasks' ) {
-			$this->complete_tasks();
+		switch ( strtolower( $this->args[0] ) ) {
+			case 'complete_tasks':
+				$this->complete_tasks();
+				break;
+			
+			case 'hooks':
+				$this->hooks();
+				break;
 		}
 		
 		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
@@ -172,6 +178,24 @@ class Base {
 		// exec('echo "'.$out.'" | mate;');
 	
 		exec('echo "'.$out.'" | git commit --edit --file -');
+	}
+	
+	public function hooks() {
+		
+		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
+		if ( $is_git_root[0] == '0' ) {
+			$this->clear();
+			echo "Please run $this->script_name hooks from the root of your git directory.\n";
+			exit;
+		}else {
+			$this->clear();
+			exec('echo "base;" >> .git/hooks/pre-commit; chmod 755 .git/hooks/pre-commit;');
+			echo "Pre-commit hook added.\n";
+			exec('echo "base complete_tasks;" >> .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
+			echo "Post-commit hook added.\n";
+			exit;
+		}
+		
 	}
 	
 	public function complete_tasks() {

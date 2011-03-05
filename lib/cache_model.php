@@ -8,7 +8,7 @@ class Cache_model
 	public function __construct()
 	{
 		$frontendOptions = array('lifetime' => NULL);
-		$backendOptions = array('cache_dir' => 'tmp');
+		$backendOptions = array('cache_dir' => APPLICATION_PATH.'/tmp');
 		$this->cache = Zend_Cache::factory('Output', 'File', $frontendOptions, $backendOptions);
 	}
 
