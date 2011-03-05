@@ -5,9 +5,9 @@ Class Basecamp
 
 	public $connect;
 
-	public function __construct()
+	public function __construct($subdomain, $apitoken)
 	{
-		$this->connect = new Api_connector();
+		$this->connect = new Api_connector($subdomain, $apitoken);
 	}
 
 	public function get_project_list()

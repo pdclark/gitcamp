@@ -7,10 +7,8 @@ require_once 'Zend/Loader.php';
 defined('APPLICATION_PATH')
 		|| define('APPLICATION_PATH', realpath(dirname(__FILE__)));
 
-class Campsentry
-{
+class Base { 
 
-	public $config;
 	public $opts;
 	public $args;
 	public $client;
@@ -36,7 +34,6 @@ class Campsentry
 	{
 		// Load Zend Classes
 		Zend_Loader::loadClass('Zend_Console_Getopt');
-		Zend_Loader::loadClass('Zend_Config_Ini');
 		Zend_Loader::loadClass('Zend_Http_Client');
 		Zend_Loader::loadClass('Zend_Cache');
 		Zend_Loader::loadClass('Zend_Db');
@@ -47,9 +44,6 @@ class Campsentry
 		include_once(APPLICATION_PATH . '/lib/basecamp.php');
 		include_once(APPLICATION_PATH . '/models/cache_model.php');
 		include_once(APPLICATION_PATH . '/models/db_model.php');
-		
-		$this->basecamp = new Basecamp();
-		$this->cache = new Cache_model();
 		
 		// CLI arguments
 		$this->opts = new Zend_Console_Getopt('abp:');
@@ -64,22 +58,17 @@ class Campsentry
 		// Called at start of $this->run()
 		
 		$this->clear();
-		
-		// Project list
-		$this->project_list = $this->cache->get_project_list( $this->basecamp );
-		
+
 		// Subdomain
 		unset($return);
 		exec('git config --get basecamp.subdomain', $return);
 		$this->subdomain = $return[0];
 		if (empty( $this->subdomain) ) {
 			
-			$this->subdomain = $this->input("Enter your basecamp subdomain: ");
+			$this->subdomain = $this->input("Enter your Basecamp subdomain: ");
 			exec( 'git config --global basecamp.subdomain ' . $this->subdomain );
 			$this->config();
 			
-		}else {
-			echo 'Basecamp subdomain: '.$this->subdomain."\n";
 		}
 		
 		// API Token
@@ -88,21 +77,37 @@ class Campsentry
 		$this->apitoken = $return[0];
 		if (empty( $this->apitoken) ) {
 			
-			$this->apitoken = $this->input("Enter your basecamp apitoken: ");
+			$this->apitoken = $this->input("Enter your basecamp API Token: ");
 			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
 			$this->config();
 			
 		}else {
-			echo 'API Token: '.$this->apitoken."\n";
+			// echo 'API Token: '.$this->apitoken."\n";
 		}
 		
+		
+		// Need Basecamp info to get this far
+		
+		$this->basecamp = new Basecamp( $this->subdomain, $this->apitoken );
+		$this->cache = new Cache_model();
+		
+		// Project list
+		$this->project_list = $this->cache->get_project_list( $this->basecamp );
+			
 		// Project Name & ID
 		unset($return);
 		exec('git config --get basecamp.projectid', $return);
 		$this->projectid = $return[0];
+		
+		$this->header();
+		
 		if (empty( $this->projectid ) ) {
 			
-			foreach ($this->project_list as $key => $p ) { echo "[$key] {$p['name']}\n"; }
+			echo "\n";
+			foreach ($this->project_list as $key => $p ) {
+				echo "[$key] {$p['name']}\n";
+			}
+			echo "\n";
 			
 			$key = $this->input('Which project is this Git repo for?');
 			$this->projectid = $this->project_list[$key]['id'];
@@ -117,15 +122,12 @@ class Campsentry
 					$this->projectname = $project['name'];
 				}
 			}
-			
-			echo 'Project: '.$this->projectname."\n";
 		}
 		
-		echo "\n";
 	}
  
-	public function run()
-	{
+	public function run() {
+
 		$this->config();
 		
 		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
@@ -153,6 +155,22 @@ class Campsentry
 
 	}
 	
+	public function header() {
+		$reload = 'Refresh';
+		$diff = strlen($this->subdomain) - strlen($reload);
+		if ( strlen($this->subdomain) < strlen($reload) ) {
+			$pad1 = str_pad('', abs($diff));
+		}else {
+			$pad2 = str_pad('', $diff);
+		}
+		
+		$this->clear();
+		
+		echo  $pad1.$this->subdomain;
+		if ( !empty($this->projectname) ) echo ': '.$this->projectname;
+		echo  "\n".$pad2."$reload: [p]roject  [t]odo lists  [s]ubdomain  [a]pi \n";
+	}
+	
 	public function project() {
 		$this->active_todo_list = $this->cache->set_active_todo_list( null );
 		$this->set_project();
@@ -178,10 +196,13 @@ class Campsentry
 			$this->run();
 			exit;
 		}
-
+		
+		echo "\n";
 		foreach ($this->todo_index as $key => $p ) {
 			echo "[$key] {$p['name']}\n";
 		}
+		echo "\n";
+		
 		$key = $this->input('Which todo list?');
 		$this->active_todo_list = $this->todo_index[$key];
 
@@ -194,27 +215,70 @@ class Campsentry
 		//print_r( $this->cache->get_active_todo_list( $this->project, $this->basecamp ) );
 	}
 	
-	public function reload() {
-		$this->cache->set_project_list(null, $this->basecamp);
-		$this->cache->set_project(null, $this->basecamp);
-		$this->project_list = $this->cache->set_project_list( null, $this->basecamp );
-		$this->active_todo_list = $this->cache->set_active_todo_list( null, $this->basecamp );
-		$this->args[0] = null;
+	public function maybe_reload( $input ) {
+		
+		$input = strtolower( $input[0] );
+		
+		switch ( $input ) {
+			case 'p':
+			case 'projects':
+				
+				$this->cache->set_project_list(null, $this->basecamp);
+				$this->cache->set_project(null, $this->basecamp);
+				$this->project_list = $this->cache->set_project_list( null, $this->basecamp );
+
+				exec('git config --unset basecamp.projectid');
+				unset( $this->projectname, $this->projectid );
+
+				break;
+			
+			case 't':
+			case 'todo':
+			
+				$this->cache->set_todo_index( $this->projectid, null);
+			
+				break;
+				
+			case 's':
+			case 'subdomain':
+				exec( 'git config --global --unset basecamp.subdomain' );
+				unset( $this->subdomain );
+				break;
+				
+			case 'a':
+			case 'api':
+				exec( 'git config --global --unset basecamp.apitoken' );
+				unset( $this->apitoken );
+				break;
+			default:
+			
+				// If input not listed, don't continue to run() below.
+				return false;
+			
+				break;
+		}
+		
 		$this->run();
+		
 	}
 	
 	public function input($prompt) {
-		echo "$prompt ";
-		return trim(fgets(STDIN));
+		echo "$prompt \n";
+		
+		$input = trim(fgets(STDIN));
+		
+		$this->maybe_reload( $input );
+		
+		return $input;
 	}
 	
 	public function clear($out = TRUE) {
 	    $clearscreen = chr(27)."[H".chr(27)."[2J";
 	    if ($out) print $clearscreen;
 	    else return $clearscreen;
-	  }
+	}
 }
 
-$foo = new Campsentry();
+$all_your = new Base(); // are belong to us
 
 ?>

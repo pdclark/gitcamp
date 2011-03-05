@@ -2,27 +2,33 @@
 
 Class Api_connector
 {
+	public $apitoken;
+	public $base;
 
-  public function api_connect($call)
-  {
-    $config = new Zend_Config_Ini(APPLICATION_PATH . '/config/config.ini', 'api');
-    $client = new Zend_Http_Client();
-    $client->setAuth($config->basecamp->token, 'password');
-    $client->setUri($config->basecamp->uri->base.$call);
-    $client->request('GET');
-    $response = $client->request();
+	function __construct( $subdomain, $apitoken ) {
+		$this->base = 'https://'.$subdomain.'.basecamphq.com';
+		$this->apitoken = $apitoken;
+	}
 
-    if ($response->getStatus() == 200) 
-    {
-      // echo "Success\n";
-      return simplexml_load_string($response->getBody());
-    } 
-    else 
-    { 
-      echo "Failure\n";
-      echo $response->getStatus() . ": " . $response->getMessage() . "\n";
-    }
-  }
+	public function api_connect($call)
+	{
+		$client = new Zend_Http_Client();
+		$client->setAuth($this->apitoken, 'password');
+		$client->setUri($this->base.$call);
+		$client->request('GET');
+		$response = $client->request();
+
+		if ($response->getStatus() == 200) 
+		{
+			// echo "Success\n";
+			return simplexml_load_string($response->getBody());
+		} 
+		else 
+		{ 
+			echo "Failure\n";
+			echo $response->getStatus() . ": " . $response->getMessage() . "\n";
+		}
+	}
 
 }
 
