@@ -19,7 +19,7 @@ class Base {
 	public $project_list = array();
 	public $project;
 	
-	// Loaded from Git & Basecamp
+	// Loaded from git & Basecamp
 	public $subdomain;
 	public $apitoken;
 	public $projectid;
@@ -36,14 +36,11 @@ class Base {
 		Zend_Loader::loadClass('Zend_Console_Getopt');
 		Zend_Loader::loadClass('Zend_Http_Client');
 		Zend_Loader::loadClass('Zend_Cache');
-		Zend_Loader::loadClass('Zend_Db');
 		
 		// Local app files
-		include_once(APPLICATION_PATH . '/connectors/api_connector.php');
-		include_once(APPLICATION_PATH . '/connectors/db_connector.php');
+		include_once(APPLICATION_PATH . '/lib/api_connector.php');
 		include_once(APPLICATION_PATH . '/lib/basecamp.php');
-		include_once(APPLICATION_PATH . '/models/cache_model.php');
-		include_once(APPLICATION_PATH . '/models/db_model.php');
+		include_once(APPLICATION_PATH . '/lib/cache_model.php');
 		
 		// CLI arguments
 		$this->opts = new Zend_Console_Getopt('abp:');
@@ -58,7 +55,14 @@ class Base {
 		// Called at start of $this->run()
 		
 		$this->clear();
-
+		
+		// Are we in a git repo?
+		unset($return);
+		exec('git status', $return, $exit);
+		if ( $exit !== 0 ) {
+			exit("Please run $this->script_name inside a git repository.\n");
+		}
+		
 		// Subdomain
 		unset($return);
 		exec('git config --get basecamp.subdomain', $return);
@@ -86,8 +90,7 @@ class Base {
 		}
 		
 		
-		// Need Basecamp info to get this far
-		
+		// Connect to Basecamp
 		$this->basecamp = new Basecamp( $this->subdomain, $this->apitoken );
 		$this->cache = new Cache_model();
 		
@@ -109,7 +112,7 @@ class Base {
 			}
 			echo "\n";
 			
-			$key = $this->input('Which project is this Git repo for?');
+			$key = $this->input('Which project is this git repo for?');
 			$this->projectid = $this->project_list[$key]['id'];
 			
 			exec( 'git config basecamp.projectid ' . $this->projectid ); // Not global
