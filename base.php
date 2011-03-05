@@ -102,9 +102,9 @@ class Base {
 		exec('git config --get basecamp.projectid', $return);
 		$this->projectid = $return[0];
 		
-		$this->header();
-		
 		if (empty( $this->projectid ) ) {
+		
+			$this->header();
 			
 			echo "\n";
 			foreach ($this->project_list as $key => $p ) {
@@ -127,6 +127,8 @@ class Base {
 			}
 		}
 		
+		$this->header();
+		
 	}
  
 	public function run() {
@@ -135,6 +137,9 @@ class Base {
 		
 		switch ( strtolower( $this->args[0] ) ) {
 			case 'complete_tasks':
+			case 'done':
+			case 'mark':
+			case 't':
 				$this->complete_tasks();
 				break;
 			
@@ -211,7 +216,7 @@ class Base {
 		$this->clear();
 		
 		if (empty($tasks)) {
-			echo 'No tasks found in last commit message.';
+			echo "No tasks found in last commit message.\n";
 			exit;	
 		}
 		
