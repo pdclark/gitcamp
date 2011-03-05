@@ -21,6 +21,12 @@ class Campsentry
 	public $project_list = array();
 	public $project;
 	
+	// Loaded from Git & Basecamp
+	public $subdomain;
+	public $apitoken;
+	public $projectid;
+	public $projectname;
+	
 	public $script_name;
 	
 	public $cache;
@@ -35,7 +41,7 @@ class Campsentry
 		Zend_Loader::loadClass('Zend_Cache');
 		Zend_Loader::loadClass('Zend_Db');
 		
-		// Locad app files
+		// Local app files
 		include_once(APPLICATION_PATH . '/connectors/api_connector.php');
 		include_once(APPLICATION_PATH . '/connectors/db_connector.php');
 		include_once(APPLICATION_PATH . '/lib/basecamp.php');
@@ -45,17 +51,83 @@ class Campsentry
 		$this->basecamp = new Basecamp();
 		$this->cache = new Cache_model();
 		
-		$this->script_name = 'bc';
+		// CLI arguments
+		$this->opts = new Zend_Console_Getopt('abp:');
+		if ( empty($this->args) ) { $this->args = $this->opts->getRemainingArgs(); }
+		
+		$this->script_name = 'base';
+		
 		$this->run();
+	}
+	
+	public function config() {
+		// Called at start of $this->run()
+		
+		$this->clear();
+		
+		// Project list
+		$this->project_list = $this->cache->get_project_list( $this->basecamp );
+		
+		// Subdomain
+		unset($return);
+		exec('git config --get basecamp.subdomain', $return);
+		$this->subdomain = $return[0];
+		if (empty( $this->subdomain) ) {
+			
+			$this->subdomain = $this->input("Enter your basecamp subdomain: ");
+			exec( 'git config --global basecamp.subdomain ' . $this->subdomain );
+			$this->config();
+			
+		}else {
+			echo 'Basecamp subdomain: '.$this->subdomain."\n";
+		}
+		
+		// API Token
+		unset($return);
+		exec('git config --get basecamp.apitoken', $return);
+		$this->apitoken = $return[0];
+		if (empty( $this->apitoken) ) {
+			
+			$this->apitoken = $this->input("Enter your basecamp apitoken: ");
+			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
+			$this->config();
+			
+		}else {
+			echo 'API Token: '.$this->apitoken."\n";
+		}
+		
+		// Project Name & ID
+		unset($return);
+		exec('git config --get basecamp.projectid', $return);
+		$this->projectid = $return[0];
+		if (empty( $this->projectid ) ) {
+			
+			foreach ($this->project_list as $key => $p ) { echo "[$key] {$p['name']}\n"; }
+			
+			$key = $this->input('Which project is this Git repo for?');
+			$this->projectid = $this->project_list[$key]['id'];
+			
+			exec( 'git config basecamp.projectid ' . $this->projectid ); // Not global
+			$this->config();
+			
+		}else {
+			
+			foreach ( $this->project_list as $project ) {
+				if ( $project['id'] == $this->projectid ) {
+					$this->projectname = $project['name'];
+				}
+			}
+			
+			echo 'Project: '.$this->projectname."\n";
+		}
+		
+		echo "\n";
 	}
  
 	public function run()
 	{
-		$this->opts = new Zend_Console_Getopt('abp:');
-		if ( empty($this->args) ) { $this->args = $this->opts->getRemainingArgs(); }
+		$this->config();
 		
-		$this->project = $this->cache->get_project( $this->basecamp );
-		$this->project_list = $this->cache->get_project_list( $this->basecamp );
 		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
 		
 		$method = $this->args[0];
@@ -63,19 +135,11 @@ class Campsentry
 			$this->$method();
 		}
 		
-		if ( empty( $this->project ) ) {
-			$this->set_project();
-			$this->run();
-			exit;
-		}else {
-			
-			$this->set_todo_index();
-			echo "\n** {$this->project['name']} ** active.\nChange with $this->script_name reload.\n\n";
-		}
+		$this->set_todo_index();
+		echo "\n** {$this->projectname} ** active.\nChange with $this->script_name reload.\n\n";
 
 		$this->clear();
-		$this->tasks = $this->cache->get_tasks( $this->project['id'], $this->active_todo_list['id'], $this->basecamp );
-		
+		$this->tasks = $this->cache->get_tasks( $this->projectid, $this->active_todo_list['id'], $this->basecamp );
 		
 		foreach ($this->tasks as $key => $t ) {
 			extract($t);
@@ -86,91 +150,7 @@ class Campsentry
 		
 		
 		exit(0);
-		
-		/*
 
-		if(!isset($command[0]))
-		{
-			echo "Enter a command\n";
-		}
-		elseif($command[0] === "project" || $command[0] === "p")
-		{
-
-			if(!isset($command[1]))
-			{
-				$command[1] = '';
-			}
-
-			switch ($command[1]) 
-			{
-				case 'set':
-					$cache->set_project($command[2]);
-					break;
-				case 'show':
-					$cache->get_project();
-					break;
-				case 'debug':
-					$basecamp->list_projects();
-					break;
-				case 'list':
-		default:
-			echo 'Loading... ';
-					$basecamp->list_projects();
-					break;
-			}
-		}
-		elseif($command[0] === "todolist" || $command[0] === "todo" || $command[0] === "t")
-		{
-			$projects = $cache->get_project_list();
-			
-			foreach ($projects as $key => $p ) {
-				echo "[$key] {$p['name']}\n";
-			}
-			echo "Which project?\n";
-			
-			$project_id = trim(fgets(STDIN));
-			
-			echo "{$projects[$project_id]['name']} made active. Change with bc project.\n";
-	
-		
-			if(!isset($command[1]))
-			{
-				$command[1] = '';
-			}
-
-			switch ($command[1]) 
-			{
-				case 'set':
-					$cache->set_project($command[2]);
-					break;
-				case 'show':
-		case 'list':
-				default:
-			fwrite(STDOUT, "Hello...\nWhat is your name? ");
-			$name = trim(fgets(STDIN));
-			fwrite(STDOUT, "Hello, $name!\n");
-
-			ob_start();
-			$project = $cache->get_project();
-			ob_end_clean();
-			$list = $command[2];
-			if ( empty($project) ) {
-				echo "Please set a project with: todo set ###\nLoading... ";
-						$basecamp->list_projects();
-				
-			}else if ( empty($list) ){
-				echo "Display which list? \nLoading... ";
-				$basecamp->project_get_all_lists( $project );
-			}else {
-				$basecamp->get_todo_items($project, $list);
-			}
-					break;
-				case 'debug':
-					$basecamp->list_projects();
-					break;
-		}
-	
-		}*/
 	}
 	
 	public function project() {
@@ -189,10 +169,10 @@ class Campsentry
 	
 	public function set_todo_index() {
 		
-		$this->todo_index = $this->cache->get_todo_index( $this->project['id'], $this->basecamp );
+		$this->todo_index = $this->cache->get_todo_index( $this->projectid, $this->basecamp );
 		
 		if ( empty( $this->todo_index ) ) {
-			echo "All todo lists for {$this->project['name']} are complete.\n\n";
+			echo "All todo lists for {$this->projectname} are complete.\n\n";
 			$this->cache->set_project(null, $this->basecamp);
 			$this->cache->set_todo_index(null, $this->basecamp);
 			$this->run();
