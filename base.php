@@ -133,6 +133,10 @@ class Base {
 
 		$this->config();
 		
+		if ( $this->args[0] == 'complete_tasks' ) {
+			$this->complete_tasks();
+		}
+		
 		$this->active_todo_list = $this->cache->get_active_todo_list( $this->project, $this->basecamp );
 		$this->get_todo_index();
 		$this->tasks = $this->cache->get_tasks( $this->projectid, $this->active_todo_list['id'], $this->basecamp );
@@ -163,11 +167,41 @@ class Base {
 		// Load Tasks
 		foreach ($this->tasks as $key => $task ) {
 			extract($task);
-			$out .= "[$id] $content \n";
+			$out .= "$content $id\n";
 		}
 		// exec('echo "'.$out.'" | mate;');
 	
 		exec('echo "'.$out.'" | git commit --edit --file -');
+	}
+	
+	public function complete_tasks() {
+		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
+		
+		foreach ( $commit_message as $line ) {
+			preg_match('/ ([0-9]{8})$/i', $line, $match);
+			if (!empty($match[1])) {
+				$tasks[] = $match[1];
+			}
+		}
+		
+		$this->clear();
+		
+		if (empty($tasks)) {
+			echo 'No tasks found in last commit message.';
+			exit;	
+		}
+		
+		echo "Marking tasks complete... \n";
+		foreach ($tasks as $task_id) {
+			echo "$task_id... ";
+			if ( $this->basecamp->complete_task( $task_id ) ) {
+				echo "Done. \n";
+			}else {
+				echo "Failed. \n";
+			}
+		}
+
+		exit;
 	}
 	
 	public function project() {

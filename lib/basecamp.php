@@ -81,6 +81,15 @@ Class Basecamp
 			return $tasks;
 		}
 	}
+	
+	public function complete_task($id) {
+		$call = '/todo_items/'.$id.'/complete.xml';
+		$data = $this->connect->api_connect($call, 'PUT');
+		if(is_object($data)) {
+			print_r($data);
+		}
+		return true;
+	}
 }
 
 ?>
