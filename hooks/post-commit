@@ -1,0 +1,4 @@
+#!/bin/sh
+
+# Mark todos as complete in basecamp
+gitcamp complete;
