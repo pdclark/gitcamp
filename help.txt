@@ -1,0 +1,16 @@
+usage: gitcamp <subcommand>
+
+Available subcommands are:
+   init      Connect a git repo to Basecamp
+             Add commit hooks
+             Set git camp alias
+
+   todo      List all todos
+             Also available as main command: todo
+
+   config    Modify settings
+
+   flush     Flush gitcamp cache
+             Empties automatically every 5 minutes
+
+Everything else is run for you at "git commit"

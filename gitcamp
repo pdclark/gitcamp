@@ -15,6 +15,7 @@ class GitCamp {
 
 	public $opts;
 	public $args;
+	public $method;
 	
 	// Loaded from git & Basecamp
 	public $subdomain;
@@ -38,6 +39,7 @@ class GitCamp {
 		// CLI arguments
 		$this->opts = new Zend_Console_Getopt('abp:');
 		if ( empty($this->args) ) { $this->args = $this->opts->getRemainingArgs(); }
+		$this->method = ( empty($this->args[0]) ) ? 'help' : strtolower( $this->args[0] ); // Default to help method
 		
 		$this->script_name = basename($_SERVER["SCRIPT_FILENAME"]);
 		
@@ -48,19 +50,10 @@ class GitCamp {
 	// General routing
 	private function run() {
 		
-		$method = ( empty($this->args[0]) ) ? 'help' : strtolower( $this->args[0] );
-		
 		// Aliases
-		switch ( $method ) {
+		switch ( $this->method ) {
 			case 'help':
-				$this->help();
-				break;
-			
-			case 'init':
-				$this->init();
-				$this->hooks();
-				$this->header();
-				$this->input();
+				$this->help(); // Don't run init for help
 				break;
 				
 			case 'clear':
@@ -78,7 +71,8 @@ class GitCamp {
 				
 			default:
 				// Call class method by subcommand
-				if (method_exists($this, $method)) {
+				if (method_exists($this, $this->method)) {
+					$method = $this->method;
 					$this->init();
 					$this->$method();
 				}
@@ -91,22 +85,7 @@ class GitCamp {
 	
 	// Default output
 	public function help() {
-?>usage: gitcamp <subcommand>
-
-Available subcommands are:
-   init      Connect a git repo to Basecamp
-             Add commit hooks
-             Set git camp alias
-             Change settings
-
-   todo      List all todos
-             Also available as main command: todo
-
-   flush     Flush gitcamp cache
-
-Everything else is run for you at "git commit"
-
-<?php
+		include 'help.txt';
 		exit;
 	}
 	
@@ -197,6 +176,28 @@ Everything else is run for you at "git commit"
 				}
 			}
 		}
+		
+		if ( $this->method == 'init' ) { // Called explicitly
+			$this->hooks(); // Setup hooks
+
+			echo "Gitcamp setup complete. Hooks will run on 'git commit'.\n";
+			echo "To change settings, run gitcamp config\n\n";
+			
+			exit; // If init was the subcommand, we don't need to continue
+		}
+		
+	}
+	
+	// Change existing settings
+	public function config() {
+		echo "Change what setting?\n";
+		echo "  [s]ubdomain   $this->subdomain \n";
+		echo "  [p]roject     {$this->project->name} \n";
+		echo "  [a]pi key     $this->apitoken \n\n";
+		echo "  [c]ache flush\n";
+		echo "  [q]uit\n";
+		
+		$this->input();
 	}
 	
 	// Copy gitcamp hooks into .git/hooks in current repository
@@ -328,19 +329,7 @@ Everything else is run for you at "git commit"
 		$this->basecamp->update_list( $list->id, array('tracked' => 'true') );
 	}
 	
-	// Output global interactive input options
-	private function header() {
-		echo "Gitcamp setup successfully. Hooks will run on 'git commit'.\n\n";
-		
-		echo "Make changes?\n";
-		echo "  [s]ubdomain   $this->subdomain \n";
-		echo "  [p]roject     {$this->project->name} \n";
-		echo "  [a]pi key     $this->apitoken \n\n";
-		echo "  [c]ache flush\n";
-		echo "  [q]uit\n";
-	}
-	
-	// Respond to global interactive input
+	// Respond to input
 	private function respond( $input ) {
 		
 		$input = strtolower( $input[0] );
