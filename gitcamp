@@ -26,7 +26,7 @@ class GitCamp {
 	
 	public $basecamp;
 
-	public function __construct() {
+	function __construct() {
 		
 		// Load Zend Classes
 		Zend_Loader::loadClass('Zend_Console_Getopt');
@@ -45,48 +45,51 @@ class GitCamp {
 	
 	}
 	
-	public function run() {
+	// General routing
+	private function run() {
 		
 		$method = ( empty($this->args[0]) ) ? 'help' : strtolower( $this->args[0] );
 		
-		if ($method !== 'help' && $method !== 'init') {
-			$this->init();
-		}
-		
-		if (method_exists($this, $method)) {
-			$this->$method();
+		// Aliases
+		switch ( $method ) {
+			case 'help':
+				$this->help();
+				break;
 			
-			if ($method == 'init') {
+			case 'init':
+				$this->init();
 				$this->hooks();
 				$this->header();
 				$this->input();
-			}
-			
-			exit;
-		}
-		
-		// Aliases
-		switch ( $method ) {
+				break;
+				
 			case 'clear':
 			case 'cache':
+				$this->init();
 				$this->flush();
 				break;
 				
-			case 'todos':
-			case 'todo':
 			case 't':
-				$this->output_todos();
-				exit();
+			case 'todos':
+				$this->init();
+				$this->todo();
+				exit;
+				break;
+				
+			default:
+				// Call class method by subcommand
+				if (method_exists($this, $method)) {
+					$this->init();
+					$this->$method();
+				}
 				break;
 		}
 		
-		$this->header();
-		$this->input();
-		
-		exit(0);
+		exit;
 
 	}
 	
+	// Default output
 	public function help() {
 ?>usage: gitcamp <subcommand>
 
@@ -104,11 +107,11 @@ Available subcommands are:
 Everything else is run for you at "git commit"
 
 <?php
+		exit;
 	}
 	
+	// Setup
 	public function init() {
-		// Called at start of $this->run()
-		
 		// Are we in a git repo?
 		unset($return);
 		exec('git status', $return, $exit);
@@ -196,17 +199,7 @@ Everything else is run for you at "git commit"
 		}
 	}
 	
-	public function header() {
-		echo "Gitcamp setup successfully. Hooks will run on 'git commit'.\n\n";
-		
-		echo "Make changes?\n";
-		echo "  [s]ubdomain   $this->subdomain \n";
-		echo "  [p]roject     {$this->project->name} \n";
-		echo "  [a]pi key     $this->apitoken \n\n";
-		echo "  [c]ache flush\n";
-		echo "  [q]uit\n";
-	}
-	
+	// Copy gitcamp hooks into .git/hooks in current repository
 	public function hooks() {
 		
 		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
@@ -222,80 +215,15 @@ Everything else is run for you at "git commit"
 		}
 		
 	}
-		
-	public function maybe_reload( $input ) {
-		
-		$input = strtolower( $input[0] );
-		
-		switch ( $input ) {
-			case 'p':
-			case 'projects':
-				
-				exec('git config --unset basecamp.projectid');
-				unset( $this->project->name, $this->project->id );
-
-				break;
-			
-			case 'c':
-			case 'cache':
-			
-				$this->basecamp->cache->clean();
-			
-				break;
-				
-			case 's':
-			case 'subdomain':
-				exec( 'git config --global --unset basecamp.subdomain' );
-				unset( $this->subdomain );
-				break;
-				
-			case 'a':
-			case 'api':
-				exec( 'git config --global --unset basecamp.apitoken' );
-				unset( $this->apitoken );
-				break;
-				
-			case 'q':
-			case 'quit':
-			case 'x':
-			case 'exit':
-			
-				exit;
-				break;
-			default:
-			
-				// If input not listed, don't continue to run() below.
-				return false;
-			
-				break;
-		}
-		
-		$this->run();
-		
-	}
 	
-	public function input($prompt='') {
-		echo "$prompt \n";
-		
-		$input = trim(fgets(STDIN));
-		
-		$this->maybe_reload( $input );
-		
-		return $input;
-	}
-	
-	public function clear($out = TRUE) {
-	    $clearscreen = chr(27)."[H".chr(27)."[2J";
-	    if ($out) print $clearscreen;
-	    else return $clearscreen;
-	}
-	
+	// Force delete application cache
 	public function flush() {
 		$this->basecamp->cache->clean();
 		exit("Cache cleared\n");
 	}
 	
-	public function output_todos() {
+	// List all todo lists and items for current project
+	public function todo () {
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
 		
 		if ( is_a($lists, 'SimpleXMLElement') ) { 
@@ -312,28 +240,34 @@ Everything else is run for you at "git commit"
 		} 
 	}
 	
+	// Scan the last Git commit message for todo IDs and time entries
+	// Send updates to Basecamp
 	public function complete() {
 		exec( 'pwd', $pwd );
 		$commit_file = $pwd[0].'/'.$this->args[2];
 		
 		if ( false === ( $commit_message = file_get_contents( $commit_file ) ) ) { // Get message from file
 			exec( 'git log -n 1 --format=format:"%B"', $commit_message ); // Get Message from log
+		}else {
+			$commit_message = explode( "\n", $commit_message);
 		}
-		
-		preg_match('/# source:([a-z]*)/i', $commit_message, $match);
+
+		// Check for commit message source
+		preg_match('/# source:([a-z]*)/i', implode( "\n", $commit_message), $match);
 		$source = $match[1];
-		
 		if ( in_array($source, array(
 			'message',
 			'merge',
 			'squash',
 			'amend',
 		), true) ) {
+			// Not a normal commit.
 			exit("Commit from $source: Tasks and time entries are not proccessed.\n\n");
 		}
 
+		// Find todo entries
 		foreach ( $commit_message as $line ) {
-			if ($line[0] == '#') {continue;}
+			if ($line[0] == '#') {continue;} // Comment
 			
 			preg_match('/
 				[#]([0-9]{8})          # todo item ID (1)
@@ -386,12 +320,88 @@ Everything else is run for you at "git commit"
 		exit;
 	}
 	
-	public function time_tracking_enable($list) {
+	// Turn on time tracking for a given Basecamp todo list
+	private function time_tracking_enable($list) {
 		if ( $list->tracked == 'true' ) {
 			return;
 		}
+		$this->basecamp->update_list( $list->id, array('tracked' => 'true') );
+	}
+	
+	// Output global interactive input options
+	private function header() {
+		echo "Gitcamp setup successfully. Hooks will run on 'git commit'.\n\n";
 		
-		$this->basecamp->update_list( $list->id, array('tracked' => 'true',) );
+		echo "Make changes?\n";
+		echo "  [s]ubdomain   $this->subdomain \n";
+		echo "  [p]roject     {$this->project->name} \n";
+		echo "  [a]pi key     $this->apitoken \n\n";
+		echo "  [c]ache flush\n";
+		echo "  [q]uit\n";
+	}
+	
+	// Respond to global interactive input
+	private function respond( $input ) {
+		
+		$input = strtolower( $input[0] );
+		
+		switch ( $input ) {
+			case 'p':
+			case 'projects':
+				exec('git config --unset basecamp.projectid');
+				unset( $this->project->name, $this->project->id );
+				break;
+			
+			case 'c':
+			case 'cache':
+				$this->basecamp->cache->clean();
+				break;
+				
+			case 's':
+			case 'subdomain':
+				exec( 'git config --global --unset basecamp.subdomain' );
+				unset( $this->subdomain );
+				break;
+				
+			case 'a':
+			case 'api':
+				exec( 'git config --global --unset basecamp.apitoken' );
+				unset( $this->apitoken );
+				break;
+				
+			case 'q':
+			case 'quit':
+			case 'x':
+			case 'exit':
+				exit;
+				break;
+
+			default:
+				// If input not listed, don't continue to run() below.
+				return false;
+				break;
+		}
+		
+		$this->run();
+		
+	}
+	
+	// Request terminal input with an optional prompt
+	private function input($prompt='') {
+		echo "$prompt \n";
+		
+		$input = trim(fgets(STDIN));
+		
+		$this->respond( $input );
+		
+		return $input;
+	}
+	
+	// Clear Terminal window
+	private function clear($out = TRUE) {
+	    $clearscreen = chr(27)."[H".chr(27)."[2J";
+	    if ($out) print $clearscreen;
+	    else return $clearscreen;
 	}
 	
 }
