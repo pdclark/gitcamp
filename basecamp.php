@@ -43,30 +43,36 @@ class Basecamp
 	function file_categories($project_id) {
 		return $this->hook("/projects/{$project_id}/attachment_categories","attachment-category");
 	}
-
-	// This will return all of the people in the given company. 
-	// If a project id is given, it will be used to filter the set of people 
-	// that are returned to include only those that can access the given project. 
-	function people($company_id) {
-		return $this->hook("/contacts/people/{$company_id}","person");
-	}
 	
-	// This will return all of the people in the given company that can access the given project.
-	function people_per_project($project_id, $company_id) {
-		return $this->hook("/projects/{$project_id}/contacts/people/{$company_id}","person");
-	}
-
-	// This will return information about the referenced person.
-	function person($person_id) {
-		return $this->hook("/contacts/person/{$person_id}","person");
-	}
-
 	// This will return a list of all active, 
 	// on-hold, and archived projects that you have access to. The list is not ordered.
 	function projects() {
 	  	return $this->hook("/projects.xml","project");
 	}
+	
+	/*======================/
+	 * 	People
+	/*=====================*/
 
+	// Returns the currently logged in person (you).
+	function current_person() {
+		return $this->hook("/me.xml",'person');
+	}
+
+	// Returns all people visible to (and including) the requesting user.
+	function people() {
+		return $this->hook("/people.xml","person");
+	}
+	
+	// Returns all people with access to the given project.
+	function people_in_project($project_id) {
+		return $this->hook("/projects/{$project_id}/people.xml","person");
+	}
+
+	// Returns a single person identified by their integer ID.
+	function person($person_id) {
+		return $this->hook("/contacts/person/{$person_id}","person");
+	}
 
 	/*======================/
 	 * 	Messages and Comments
@@ -84,7 +90,7 @@ class Basecamp
 
 	// Create a new comment, associating it with a specific message.
 	function create_comment($comment) {
-		return $this->hook("/msg/create_comment","comment",array("comment" => $comment));
+		return $this->hook("/msg/create_comment","comment",array("comment" => $comment), 'PUT');
 	}
 	
 	// Creates a new message, optionally sending notifications to a selected list of people. 
@@ -94,7 +100,7 @@ class Basecamp
 	function create_message($project_id, $message, $notify = false) {
 		$request['post'] = $message;
 		if ($notify) {$request['notify'] = $notify;}
-		return $this->hook("/projects/{$project_id}/msg/create","post",$request);
+		return $this->hook("/projects/{$project_id}/msg/create","post",$request, 'PUT');
 	}
 	
 	// Delete the comment with the given id.
@@ -136,7 +142,7 @@ class Basecamp
 	function update_comment($comment_id,$body) {
 		$comment['comment_id'] = $comment_id;
 		$comment['body'] = $body;
-		return $this->hook("/msg/update_comment","comment",$comment);
+		return $this->hook("/msg/update_comment","comment",$comment, 'PUT');
 	}
 	
 	// Updates an existing message, optionally sending notifications to a selected list of people. 
@@ -145,7 +151,7 @@ class Basecamp
 	function update_message($message_id,$message,$notify = false) {
 		$request['post'] = $message;
 		if ($notify) {$request['notify'] = $notify;}
-		return $this->hook("/msg/update/{$message_id}","post",$request);
+		return $this->hook("/msg/update/{$message_id}","post",$request, 'PUT');
 	}
 	
 	
@@ -170,13 +176,13 @@ class Basecamp
 			$request['responsible_party'] = $responsible_party;
 			$request['notify'] = ($notify_party)?"true":"false";
 		}
-		return $this->hook("/todos/create_item/{$list_id}","todo-item",$request);
+		return $this->hook("/todos/create_item/{$list_id}","todo-item",$request, 'PUT');
 	}
 	
 	// This will create a new, empty list. You can create the list explicitly, 
 	// or by giving it a list template id to base the new list off of.
 	function create_list($project_id,$list) {
-		return $this->hook("/projects/{$project_id}/todos/create_list","todo-list",$list);
+		return $this->hook("/projects/{$project_id}/todos/create_list","todo-list",$list, 'PUT');
 	}
 	
 	// Deletes the specified item, removing it from its parent list.
@@ -231,13 +237,33 @@ class Basecamp
 			$request['responsible_party'] = $responsible_party;
 			$request['notify'] = ($notify_party)?"true":"false";
 		}
-		return $this->hook("/todos/update_item/{$item_id}","todo-item",$request);
+		return $this->hook("/todos/update_item/{$item_id}","todo-item",$request, 'PUT');
 	}
 	
 	// With this call you can alter the metadata for a list.
-	function update_list($project_id,$list) {
-		return $this->hook("/todos/update_list/{$list_id}","todo-list",array('list' => $list));
+	function update_list($list_id,$list) {
+		return $this->hook("/todo_lists/{$list_id}.xml","todo-list",array('todo-list' => $list), 'PUT');
 	}
+	
+	/*======================/
+	 * 	Time Tracking
+	/*=====================*/
+	
+	// Returns a page full of time entries for the given project, in descending order by date. 
+	// Each page contains up to 50 time entry records. To select a different page of data, 
+	// set the “page” query parameter to a value greater than zero. The X-Records HTTP header
+	// will be set to the total number of time entries in the project, X-Pages will be set 
+	// to the total number of pages, and X-Page will be set to the current page.
+	function project_entries($project_id) {
+		return $this->hook("/projects/{$project_id}/time_entries.xml","time-entry");
+	}
+	
+	
+	// Creates a new time entry for the given todo item.
+	function create_time_entry_for_item($item_id, $params) {
+		return $this->hook("/todo_items/$item_id/time_entries.xml",'time-entry', array('time-entry' => $params), 'POST');
+	}
+	
 	
 	/*======================/
 	 * 	Milestones
@@ -267,7 +293,7 @@ class Basecamp
     // Modifies a single milestone. You can use this to shift the deadline of a single milestone, 
 	// and optionally shift the deadlines of subsequent milestones as well. 
 	function uncomplete_milestone($milestone_id) {
-		return $this->hook("/milestones/uncomplete/{$milestone_id}","milestone");
+		return $this->hook("/milestones/uncomplete/{$milestone_id}","milestone", 'PUT');
 	}
 	
 	// Creates a single or multiple milestone(s). 
@@ -275,15 +301,15 @@ class Basecamp
 		$request['milestone'] = $milestone;
 		$request['move-upcoming-milestones'] = $move_upcoming_milestones;
 		$request['move-upcoming-milestones-off-weekends'] = $move_upcoming_milestones_off_weekends;
-		return $this->hook("/milestones/update/{$milestones_id}","milestone",array("milestone" => $milestone));
+		return $this->hook("/milestones/update/{$milestones_id}","milestone",array("milestone" => $milestone), 'PUT');
 	}
 	
 	/*===================/
 	 * 	The Worker Bees  
 	/*===================*/
 	
-	function hook($url, $expected, $send = false ) {
-		$returned = $this->request($url,$send);
+	function hook($url, $expected, $params = false, $method = 'GET' ) {
+		$returned = $this->request($url,$params, $method);
 		
 		// Return all elements inside the root element
 		// e.g., all <project> elements inside <projects> wrapper
@@ -310,14 +336,12 @@ class Basecamp
 			'Accept' => 'application/xml',
 			'Content-Type' => 'application/xml',
 		) );
-		
+
 		if ( $params ) { // Sending data?
-			$method = 'POST';
-			$xml = new SimpleXMLElement('<request/>');
-			array_walk_recursive( array_flip($params), array($xml, 'addChild') );
+			$xml = $this->array_to_xml( $params, new SimpleXMLElement('<request/>') );
 			$client->setRawData( $xml->asXML() );
 		}
-		
+
 		$request_id = md5( $url . serialize($params) );
 		
 		// Check Cache
@@ -327,7 +351,11 @@ class Basecamp
 			try {
 				$response = $client->request( $method );
 
-				if ($response->getStatus() == 200) {
+				if ( $response->getStatus() == 200 || $response->getStatus() == 201 ) {
+					if ($method == 'PUT' || $method == 'POST') { 
+						return true;
+					}
+					
 					$this->cache->save( $response->getBody(), $request_id );
 					$output = simplexml_load_string( $response->getBody() );
 				} 
@@ -349,6 +377,15 @@ class Basecamp
 		}
 		
 		return $output; // SimpleXML object
+	}
+	
+	function array_to_xml(array $arr, SimpleXMLElement $xml ) {
+	    foreach ($arr as $k => $v) {
+	        is_array($v)
+	            ? $this->array_to_xml($v, $xml->addChild($k))
+	            : $xml->addChild($k, $v);
+	    }
+	    return $xml;
 	}
 	
 }
