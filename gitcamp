@@ -109,7 +109,6 @@ Everything else is run for you at "git commit"
 		unset($return);
 		exec('git status', $return, $exit);
 		if ( $exit !== 0 ) {
-			$this->clear();
 			exit("Please run $this->script_name inside a git repository.\n");
 		}
 		
@@ -126,7 +125,6 @@ Everything else is run for you at "git commit"
 		exec('git config --get basecamp.subdomain', $return);
 		$this->subdomain = $return[0];
 		if (empty( $this->subdomain) ) {
-			$this->clear();
 			$this->subdomain = $this->input("# Enter your Basecamp subdomain: ");
 			exec( 'git config --global basecamp.subdomain ' . $this->subdomain );
 			$this->init();
@@ -138,7 +136,6 @@ Everything else is run for you at "git commit"
 		exec('git config --get basecamp.apitoken', $return);
 		$this->apitoken = $return[0];
 		if (empty( $this->apitoken ) ) {
-			$this->clear();
 			$this->apitoken = $this->input("# Enter your basecamp API Token: ");
 			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
 			$this->init();
@@ -154,9 +151,8 @@ Everything else is run for you at "git commit"
 		$this->project->id = $return[0];
 		
 		if (empty( $this->project->id ) ) {
-			$this->clear();
-			$this->header();
-			
+			echo "Loading projects...\n";
+
 			// Show only active projects
 			$projects = $this->basecamp->projects()->xpath('//project[status="active"]');
 
@@ -166,7 +162,7 @@ Everything else is run for you at "git commit"
 			}
 			echo "\n";
 			
-			$key = $this->input('# Which project is this git repo for?');
+			$key = $this->input('Which project is this git repo for?');
 			$this->project->id = $projects[$key]->id;
 			
 			exec( 'git config basecamp.projectid ' . $this->project->id ); // Not global
@@ -182,19 +178,14 @@ Everything else is run for you at "git commit"
 	}
 	
 	public function header() {
-		$reload = 'Reload';
-		$diff = strlen($this->subdomain) - strlen($reload);
-		if ( strlen($this->subdomain) < strlen($reload) ) {
-			$pad1 = str_pad('', abs($diff));
-		}else {
-			$pad2 = str_pad('', $diff);
-		}
+		echo "Gitcamp setup successfully. Hooks will run on 'git commit'.\n\n";
 		
-		$this->clear();
-		
-		echo  $pad1.$this->subdomain;
-		if ( !empty($this->projectname) ) echo ': '.$this->projectname;
-		echo  "\n".$pad2."$reload: [p]roject  [c]ache  [s]ubdomain  [a]pi  [q]uit \n";
+		echo "Make changes?\n";
+		echo "  [s]ubdomain   $this->subdomain \n";
+		echo "  [p]roject     {$this->project->name} \n";
+		echo "  [a]pi key     $this->apitoken \n\n";
+		echo "  [c]ache flush\n";
+		echo "  [q]uit\n";
 	}
 	
 	public function hooks() {
@@ -202,15 +193,15 @@ Everything else is run for you at "git commit"
 		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
 		if ( $is_git_root[0] == '0' ) {
 			$this->clear();
-			echo "# Please run $this->script_name init from the root of your git directory.\n";
+			echo "Please run $this->script_name init from the root of your git directory.\n";
 			exit;
 		}else {
 			// $this->clear();
 			exec('cp -f '.dirname(__FILE__).'/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg; chmod 755 .git/hooks/prepare-commit-msg;');
-			// echo "# Prepare commit message hook added.\n";
+			// echo "Prepare commit message hook added.\n";
 			
 			exec('cp -f '.dirname(__FILE__).'/hooks/post-commit .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
-			// echo "# Post-commit hook added.\n";
+			// echo "Post-commit hook added.\n";
 		}
 		
 	}
@@ -288,7 +279,6 @@ Everything else is run for you at "git commit"
 	}
 	
 	public function output_todos() {
-
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
 		
 		foreach ($lists as $list) {
