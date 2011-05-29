@@ -97,6 +97,7 @@ Available subcommands are:
              Change settings
 
    todo      List all todos
+             Also available as main command: todo
 
    flush     Flush gitcamp cache
 
