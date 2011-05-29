@@ -1,7 +1,7 @@
 #!/usr/bin/php
 <?php
 
-require_once '/usr/lib/php/Zend/Loader.php';
+require_once 'Zend/Loader.php';
 
 // Define path to application directory
 defined('APPLICATION_PATH')

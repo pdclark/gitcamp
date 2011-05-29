@@ -5,7 +5,7 @@ Script that loads Basecamp todo lists into Git commit messages, and marks todos 
 # Install #
 
     git clone ssh://git@git.brainstormmedia.com/bsm/gitcamp.git ~/Sites/gitcamp;
-    echo "export path=~/Sites/gitcamp:$PATH" >> ~/.bash_profile;
+    echo "export PATH=~/Sites/gitcamp:$PATH" >> ~/.bash_profile;
     # Now run "gitcamp init" in a git repo
 
 # Zend setup #
