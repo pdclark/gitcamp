@@ -97,6 +97,7 @@ Available subcommands are:
              Change settings
 
    todo      List all todos
+             Also available as main command: todo
 
    flush     Flush gitcamp cache
 
@@ -216,7 +217,7 @@ Everything else is run for you at "git commit"
 			exec('cp -f '.dirname(__FILE__).'/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg; chmod 755 .git/hooks/prepare-commit-msg;');
 			// echo "Prepare commit message hook added.\n";
 			
-			exec('cp -f '.dirname(__FILE__).'/hooks/post-commit .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
+			exec('cp -f '.dirname(__FILE__).'/hooks/commit-msg .git/hooks/commit-msg; chmod 755 .git/hooks/commit-msg;');
 			// echo "Post-commit hook added.\n";
 		}
 		
@@ -312,7 +313,24 @@ Everything else is run for you at "git commit"
 	}
 	
 	public function complete() {
-		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
+		exec( 'pwd', $pwd );
+		$commit_file = $pwd[0].'/'.$this->args[2];
+		
+		if ( false === ( $commit_message = file_get_contents( $commit_file ) ) ) { // Get message from file
+			exec( 'git log -n 1 --format=format:"%B"', $commit_message ); // Get Message from log
+		}
+		
+		preg_match('/# source:([a-z]*)/i', $commit_message, $match);
+		$source = $match[1];
+		
+		if ( in_array($source, array(
+			'message',
+			'merge',
+			'squash',
+			'amend',
+		), true) ) {
+			exit("Commit from $source: Tasks and time entries are not proccessed.\n\n");
+		}
 
 		foreach ( $commit_message as $line ) {
 			if ($line[0] == '#') {continue;}
@@ -338,8 +356,7 @@ Everything else is run for you at "git commit"
 		}
 		
 		if (empty($tasks)) {
-			echo "No tasks found in last commit message.\n";
-			exit;	
+			exit("No tasks found in last commit message.\n\n");
 		}
 		
 		echo "# Marking tasks complete... \n";
