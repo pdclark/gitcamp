@@ -1,7 +1,12 @@
 #!/usr/bin/php
 <?php
 
-require_once 'Zend/Loader.php';
+if ( ! @include 'Zend/Loader.php' ) {
+	echo "Zend Framework could not be found. Please try installing with:\n\n";
+	echo "  sudo pear channel-discover zend.googlecode.com/svn\n";
+	echo "  sudo pear install zend/zend\n\n";
+	exit;
+}
 
 // Define path to application directory
 defined('APPLICATION_PATH')
@@ -30,11 +35,17 @@ class GitCamp {
 	function __construct() {
 		
 		// Load Zend Classes
-		Zend_Loader::loadClass('Zend_Console_Getopt');
-		Zend_Loader::loadClass('Zend_Http_Client');
-		Zend_Loader::loadClass('Zend_Cache');
+		foreach( array('Zend_Console_Getopt', 'Zend_Http_Client', 'Zend_Cache') as $class ){
+			try {
+				@Zend_Loader::loadClass($class);
+			}catch ( Zend_Exception $e) {
+				exit("Unable to load Zend class $class.\n");
+			}
+		}
 		
-		include_once( 'basecamp.php');
+		if ( !@ include_once ($file = dirname(__FILE__).'/basecamp.php') ) {
+			exit("Unable to load file $file\n");
+		}
 		
 		// CLI arguments
 		$this->opts = new Zend_Console_Getopt('abp:');

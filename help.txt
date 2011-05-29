@@ -14,3 +14,4 @@ Available subcommands are:
              Empties automatically every 5 minutes
 
 Everything else is run for you at "git commit"
+
