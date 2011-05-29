@@ -165,7 +165,7 @@ class GitCamp {
 		
 		echo  $pad1.$this->subdomain;
 		if ( !empty($this->projectname) ) echo ': '.$this->projectname;
-		echo  "\n".$pad2."$reload: [p]roject  [c]ache  [s]ubdomain  [a]pi \n";
+		echo  "\n".$pad2."$reload: [p]roject  [c]ache  [s]ubdomain  [a]pi  [q]uit \n";
 	}
 	
 	public function hooks() {
@@ -216,6 +216,14 @@ class GitCamp {
 			case 'api':
 				exec( 'git config --global --unset basecamp.apitoken' );
 				unset( $this->apitoken );
+				break;
+				
+			case 'q':
+			case 'quit':
+			case 'x':
+			case 'exit':
+			
+				exit;
 				break;
 			default:
 			
