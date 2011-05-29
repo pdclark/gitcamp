@@ -54,6 +54,7 @@ class GitCamp {
 			$this->$method();
 			
 			if ($method == 'init') {
+				$this->hooks();
 				$this->header();
 				$this->input();
 			}
@@ -119,8 +120,6 @@ Everything else is run for you at "git commit"
 			exec( "git config --global alias.camp '!gitcamp $1'" );
 			$this->init();
 		}
-		
-		$this->hooks();
 		
 		// Subdomain
 		unset($return);

@@ -1,4 +1,7 @@
 #!/bin/sh
 
-# Add Basecamp todo lists to the top of the commit message
-gitcamp todo | cat -  "$1" > /tmp/out && cp /tmp/out "$1"
+if [ "$2" != 'message' ]
+	then
+	# Add Basecamp todo lists to the top of the commit message
+	gitcamp todo | cat -  "$1" > /tmp/out && cp /tmp/out "$1";
+fi
