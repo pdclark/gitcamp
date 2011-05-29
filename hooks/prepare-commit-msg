@@ -5,3 +5,5 @@ if [ "$2" != 'message' ]
 	# Add Basecamp todo lists to the top of the commit message
 	gitcamp todo | cat -  "$1" > /tmp/out && cp /tmp/out "$1";
 fi
+
+echo "#source:$2" >> $1;

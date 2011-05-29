@@ -217,7 +217,7 @@ Everything else is run for you at "git commit"
 			exec('cp -f '.dirname(__FILE__).'/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg; chmod 755 .git/hooks/prepare-commit-msg;');
 			// echo "Prepare commit message hook added.\n";
 			
-			exec('cp -f '.dirname(__FILE__).'/hooks/post-commit .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
+			exec('cp -f '.dirname(__FILE__).'/hooks/commit-msg .git/hooks/commit-msg; chmod 755 .git/hooks/commit-msg;');
 			// echo "Post-commit hook added.\n";
 		}
 		
@@ -313,6 +313,15 @@ Everything else is run for you at "git commit"
 	}
 	
 	public function complete() {
+		
+		// Extract CLI arguements to vars
+		list($method, $commit_path, $source, $hash) = $this->args;
+		
+		exec('history', $history);
+		print_r($history);
+		echo "method: $method\n commit_path: $commit_path\nsource: $source\nhash:$hash\n";
+		
+		exit;
 		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
 
 		foreach ( $commit_message as $line ) {
