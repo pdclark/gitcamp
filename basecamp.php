@@ -19,7 +19,8 @@ class Basecamp
 				'automatic_serialization' => true,
 			),
 			array( // Backend Options
-				'cache_dir' => APPLICATION_PATH.'/tmp',
+				// 'cache_dir' => APPLICATION_PATH.'/tmp',
+				'cache_dir' => sys_get_temp_dir(),
 			)
 		);
 	}

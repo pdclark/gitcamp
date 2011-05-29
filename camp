@@ -252,15 +252,6 @@ class GitCamp {
 	    if ($out) print $clearscreen;
 	    else return $clearscreen;
 	}
-
-	public function set_project() {
-		foreach ($this->project_list as $key => $p ) {
-			echo "[$key] {$p['name']}\n";
-		}
-		$key = $this->input('Which project?');
-
-		$this->cache->set_project( $this->project_list[$key] );
-	}
 	
 	public function output_todos() {
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
