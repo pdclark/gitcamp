@@ -45,12 +45,11 @@ class GitCamp {
 	public function config() {
 		// Called at start of $this->run()
 		
-		$this->clear();
-		
 		// Are we in a git repo?
 		unset($return);
 		exec('git status', $return, $exit);
 		if ( $exit !== 0 ) {
+			$this->clear();
 			exit("Please run $this->script_name inside a git repository.\n");
 		}
 		
@@ -59,7 +58,7 @@ class GitCamp {
 		exec('git config --get basecamp.subdomain', $return);
 		$this->subdomain = $return[0];
 		if (empty( $this->subdomain) ) {
-			
+			$this->clear();
 			$this->subdomain = $this->input("Enter your Basecamp subdomain: ");
 			exec( 'git config --global basecamp.subdomain ' . $this->subdomain );
 			$this->config();
@@ -71,7 +70,7 @@ class GitCamp {
 		exec('git config --get basecamp.apitoken', $return);
 		$this->apitoken = $return[0];
 		if (empty( $this->apitoken ) ) {
-			
+			$this->clear();
 			$this->apitoken = $this->input("Enter your basecamp API Token: ");
 			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
 			$this->config();
@@ -87,7 +86,7 @@ class GitCamp {
 		$this->project->id = $return[0];
 		
 		if (empty( $this->project->id ) ) {
-		
+			$this->clear();
 			$this->header();
 			
 			// Show only active projects
@@ -173,13 +172,14 @@ class GitCamp {
 		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
 		if ( $is_git_root[0] == '0' ) {
 			$this->clear();
-			echo "Please run $this->script_name hooks from the root of your git directory.\n";
+			echo "Please run $this->script_name init from the root of your git directory.\n";
 			exit;
 		}else {
 			$this->clear();
-			//exec('echo "base;" >> .git/hooks/pre-commit; chmod 755 .git/hooks/pre-commit;');
-			//echo "Pre-commit hook added.\n";
-			exec('echo "base complete_tasks;" >> .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
+			exec('cp -f '.dirname(__FILE__).'/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg; chmod 755 .git/hooks/prepare-commit-msg;');
+			echo "Prepare commit message hook added.\n";
+			
+			exec('cp -f '.dirname(__FILE__).'/hooks/post-commit .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
 			echo "Post-commit hook added.\n";
 			exit;
 		}
@@ -254,10 +254,11 @@ class GitCamp {
 	}
 	
 	public function output_todos() {
+
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
 		
 		foreach ($lists as $list) {
-			echo "\n## $list->name\n";
+			echo "\n# $list->name\n";
 			
 			$list_items = $this->basecamp->list_items( $list->id )->xpath('//todo-item');
 			foreach ( $list_items as $item ) {
@@ -265,25 +266,17 @@ class GitCamp {
 			}
 		}
 	}
-			
-	public function output_tasks() {
-		// Load Tasks
-		foreach ($this->tasks as $key => $task ) {
-			extract($task);
-			$out .= "$content $id\n";
-		}
-		// exec('echo "'.$out.'" | mate;');
-	
-		exec('echo "'.$out.'" | git commit --edit --file -');
-	}
 	
 	public function complete_tasks() {
 		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
-		
+
 		foreach ( $commit_message as $line ) {
-			preg_match('/ ([0-9]{8})$/i', $line, $match);
+			preg_match('/^ *?([0-9]{8})/i',$line, $match);
 			if (!empty($match[1])) {
-				$tasks[] = $match[1];
+				$tasks[] = array(
+					'id' => $match[1],
+					'line' => $line,
+				);
 			}
 		}
 		
@@ -295,18 +288,17 @@ class GitCamp {
 		}
 		
 		echo "Marking tasks complete... \n";
-		foreach ($tasks as $task_id) {
-			echo "$task_id... ";
-			if ( $this->basecamp->complete_task( $task_id ) ) {
+		foreach ($tasks as $task) {
+			echo $task['line'].'... ';
+			if ( $this->basecamp->complete_item( $task['id'] ) ) {
 				echo "Done. \n";
 			}else {
 				echo "Failed. \n";
 			}
 		}
+		$this->basecamp->cache->clean();
 
 		exit;
 	}
 	
 }
-
-?>
