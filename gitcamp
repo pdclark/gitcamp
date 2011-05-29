@@ -7,6 +7,8 @@ require_once 'Zend/Loader.php';
 defined('APPLICATION_PATH')
 		|| define('APPLICATION_PATH', realpath(dirname(__FILE__)));
 
+date_default_timezone_set('PST8PDT');
+
 $GitCamp = new GitCamp(); 
 
 class GitCamp { 
@@ -17,6 +19,7 @@ class GitCamp {
 	// Loaded from git & Basecamp
 	public $subdomain;
 	public $apitoken;
+	public $personid;
 	public $project;
 	
 	public $script_name;
@@ -138,12 +141,27 @@ Everything else is run for you at "git commit"
 		if (empty( $this->apitoken ) ) {
 			$this->apitoken = $this->input("# Enter your basecamp API Token: ");
 			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
+
 			$this->init();
 			
 		}
 		
 		// Connect to Basecamp
 		$this->basecamp = new Basecamp( $this->subdomain, $this->apitoken );
+		
+		// Person ID
+		unset($return);
+		exec('git config --get basecamp.personid', $return);
+		$this->personid = $return[0];
+		if ( empty($this->personid) ) {
+			$me = $this->basecamp->current_person();
+			$this->personid = $me->id;
+			
+			exec( 'git config --global basecamp.personid ' . $this->personid );
+			
+			$this->init();
+			
+		}
 		
 		// Project Name & ID
 		unset($return);
@@ -279,37 +297,67 @@ Everything else is run for you at "git commit"
 	public function output_todos() {
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
 		
-		foreach ($lists as $list) {
-			echo "\n# $list->name\n";
-			
-			$list_items = $this->basecamp->list_items( $list->id )->xpath('//todo-item');
-			foreach ( $list_items as $item ) {
-				echo "# $item->id: $item->content\n";
+		if ( is_a($lists, 'SimpleXMLElement') ) { 
+			foreach ( $lists as $list) {
+				echo "\n# $list->name\n";
+
+				$list_items = $this->basecamp->list_items( $list->id )->xpath('//todo-item');
+				foreach ( $list_items as $item ) {
+					echo "# $item->content #{$item->id}t\n";
+				}
+
+				$this->time_tracking_enable($list);
 			}
-		}
+		} 
 	}
 	
 	public function complete() {
 		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
 
 		foreach ( $commit_message as $line ) {
-			preg_match('/^ *?([0-9]{8})/i',$line, $match);
+			if ($line[0] == '#') {continue;}
+			
+			preg_match('/
+				[#]([0-9]{8})          # todo item ID (1)
+				[\s]*                  # optional white space
+				t                      # t seperator
+				[\s]*                  # optional white space
+				([.0-9:]*)             # time entry (2)
+				[\s]*                  # optional white space
+				([a-z \d !-~ \s]*)$    # description (3)
+			/ix',$line, $match);
 			if (!empty($match[1])) {
+				
 				$tasks[] = array(
 					'id' => $match[1],
+					'time' => $match[2],
+					'description' => $match[3],
 					'line' => $line,
 				);
 			}
 		}
 		
 		if (empty($tasks)) {
-			echo "# No tasks found in last commit message.\n";
+			echo "No tasks found in last commit message.\n";
 			exit;	
 		}
 		
 		echo "# Marking tasks complete... \n";
+
 		foreach ($tasks as $task) {
 			echo '# '.$task['line'].'... ';
+			
+			// Time Tracking
+			if ( !empty( $task['time'] ) ) {
+				$this->basecamp->create_time_entry_for_item( $task['id'], array(
+					'person-id' => $this->personid,
+					'date' => date('Y-m-d'),
+					'hours' => $task['time'],
+					'description' => $task['description'],
+				));
+			}
+			
+			// Todo
 			if ( $this->basecamp->complete_item( $task['id'] ) ) {
 				echo "Done. \n";
 			}else {
@@ -319,6 +367,14 @@ Everything else is run for you at "git commit"
 		$this->basecamp->cache->clean();
 
 		exit;
+	}
+	
+	public function time_tracking_enable($list) {
+		if ( $list->tracked == 'true' ) {
+			return;
+		}
+		
+		$this->basecamp->update_list( $list->id, array('tracked' => 'true',) );
 	}
 	
 }
