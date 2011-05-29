@@ -265,8 +265,10 @@ class GitCamp {
 		}
 
 		// Check for commit message source
-		preg_match('/# source:([a-z]*)/i', implode( "\n", $commit_message), $match);
+		$source_regex = '/# source:([a-z]*)/i';
+		preg_match($source_regex, implode( "\n", $commit_message), $match);
 		$source = $match[1];
+
 		if ( in_array($source, array(
 			'message',
 			'merge',
@@ -274,6 +276,14 @@ class GitCamp {
 			'amend',
 		), true) ) {
 			// Not a normal commit.
+			
+			// Remove source info from commit
+			$commit_message = preg_replace($source_regex, '', implode( "\n", $commit_message));
+			
+			$fh = fopen($commit_file, 'w') or die('Cannot write to commit file: '.$commit_file);
+			fwrite($fh, $commit_message);
+			fclose($fh);
+			
 			exit("Commit from $source: Tasks and time entries are not proccessed.\n\n");
 		}
 
