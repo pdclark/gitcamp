@@ -1,4 +1,4 @@
 #!/bin/sh
 
 # Mark todos as complete in basecamp
-camp complete_tasks;
+gitcamp complete;
