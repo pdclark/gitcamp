@@ -313,16 +313,24 @@ Everything else is run for you at "git commit"
 	}
 	
 	public function complete() {
+		exec( 'pwd', $pwd );
+		$commit_file = $pwd[0].'/'.$this->args[2];
 		
-		// Extract CLI arguements to vars
-		list($method, $commit_path, $source, $hash) = $this->args;
+		if ( false === ( $commit_message = file_get_contents( $commit_file ) ) ) { // Get message from file
+			exec( 'git log -n 1 --format=format:"%B"', $commit_message ); // Get Message from log
+		}
 		
-		exec('history', $history);
-		print_r($history);
-		echo "method: $method\n commit_path: $commit_path\nsource: $source\nhash:$hash\n";
+		preg_match('/# source:([a-z]*)/i', $commit_message, $match);
+		$source = $match[1];
 		
-		exit;
-		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
+		if ( in_array($source, array(
+			'message',
+			'merge',
+			'squash',
+			'amend',
+		), true) ) {
+			exit("Commit from $source: Tasks and time entries are not proccessed.\n\n");
+		}
 
 		foreach ( $commit_message as $line ) {
 			if ($line[0] == '#') {continue;}
@@ -348,8 +356,7 @@ Everything else is run for you at "git commit"
 		}
 		
 		if (empty($tasks)) {
-			echo "No tasks found in last commit message.\n";
-			exit;	
+			exit("No tasks found in last commit message.\n\n");
 		}
 		
 		echo "# Marking tasks complete... \n";

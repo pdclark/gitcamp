@@ -1,9 +1,17 @@
 #!/bin/sh
 
-if [ "$2" != 'message' ]
+SOURCE="$2";
+HASH="$3";
+
+if [ "$SOURCE" != 'message' ]
 	then
 	# Add Basecamp todo lists to the top of the commit message
 	gitcamp todo | cat -  "$1" > /tmp/out && cp /tmp/out "$1";
 fi
 
-echo "#source:$2" >> $1;
+if [ -n "${HASH}" ]
+	then
+	SOURCE='amend';
+fi
+
+echo "# source:$SOURCE" >> $1;
