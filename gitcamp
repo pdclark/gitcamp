@@ -192,11 +192,9 @@ Everything else is run for you at "git commit"
 		
 		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
 		if ( $is_git_root[0] == '0' ) {
-			$this->clear();
 			echo "Please run $this->script_name init from the root of your git directory.\n";
 			exit;
 		}else {
-			// $this->clear();
 			exec('cp -f '.dirname(__FILE__).'/hooks/prepare-commit-msg .git/hooks/prepare-commit-msg; chmod 755 .git/hooks/prepare-commit-msg;');
 			// echo "Prepare commit message hook added.\n";
 			
@@ -303,8 +301,6 @@ Everything else is run for you at "git commit"
 				);
 			}
 		}
-		
-		$this->clear();
 		
 		if (empty($tasks)) {
 			echo "# No tasks found in last commit message.\n";
