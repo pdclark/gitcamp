@@ -1,0 +1,313 @@
+#!/usr/bin/php
+<?php
+
+require_once '/usr/lib/php/Zend/Loader.php';
+
+// Define path to application directory
+defined('APPLICATION_PATH')
+		|| define('APPLICATION_PATH', realpath(dirname(__FILE__)));
+
+$GitCamp = new GitCamp(); 
+
+class GitCamp { 
+
+	public $opts;
+	public $args;
+	
+	// Loaded from git & Basecamp
+	public $subdomain;
+	public $apitoken;
+	public $project;
+	
+	public $script_name;
+	
+	public $basecamp;
+
+	public function __construct() {
+		
+		// Load Zend Classes
+		Zend_Loader::loadClass('Zend_Console_Getopt');
+		Zend_Loader::loadClass('Zend_Http_Client');
+		Zend_Loader::loadClass('Zend_Cache');
+		
+		include_once( 'basecamp.php');
+		
+		// CLI arguments
+		$this->opts = new Zend_Console_Getopt('abp:');
+		if ( empty($this->args) ) { $this->args = $this->opts->getRemainingArgs(); }
+		
+		$this->script_name = basename($_SERVER["SCRIPT_FILENAME"]);
+		
+		$this->run();
+	
+	}
+	
+	public function config() {
+		// Called at start of $this->run()
+		
+		$this->clear();
+		
+		// Are we in a git repo?
+		unset($return);
+		exec('git status', $return, $exit);
+		if ( $exit !== 0 ) {
+			exit("Please run $this->script_name inside a git repository.\n");
+		}
+		
+		// Subdomain
+		unset($return);
+		exec('git config --get basecamp.subdomain', $return);
+		$this->subdomain = $return[0];
+		if (empty( $this->subdomain) ) {
+			
+			$this->subdomain = $this->input("Enter your Basecamp subdomain: ");
+			exec( 'git config --global basecamp.subdomain ' . $this->subdomain );
+			$this->config();
+			
+		}
+		
+		// API Token
+		unset($return);
+		exec('git config --get basecamp.apitoken', $return);
+		$this->apitoken = $return[0];
+		if (empty( $this->apitoken ) ) {
+			
+			$this->apitoken = $this->input("Enter your basecamp API Token: ");
+			exec( 'git config --global basecamp.apitoken ' . $this->apitoken );
+			$this->config();
+			
+		}
+		
+		// Connect to Basecamp
+		$this->basecamp = new Basecamp( $this->subdomain, $this->apitoken );
+		
+		// Project Name & ID
+		unset($return);
+		exec('git config --get basecamp.projectid', $return);
+		$this->project->id = $return[0];
+		
+		if (empty( $this->project->id ) ) {
+		
+			$this->header();
+			
+			// Show only active projects
+			$projects = $this->basecamp->projects()->xpath('//project[status="active"]');
+
+			echo "\n";
+			foreach ( $projects as $key => $project ) {	
+				echo "[$key] {$project->name}\n";
+			}
+			echo "\n";
+			
+			$key = $this->input('Which project is this git repo for?');
+			$this->project->id = $projects[$key]->id;
+			
+			exec( 'git config basecamp.projectid ' . $this->project->id ); // Not global
+			$this->config();
+			
+		}else {
+			foreach ( $this->basecamp->projects() as $project ) {
+				if ( $project->id == $this->project->id ) {
+					$this->project->name = $project->name;
+				}
+			}
+		}
+	}
+ 
+	public function run() {
+
+		$this->config();
+		
+		switch ( strtolower( $this->args[0] ) ) {
+			case 'complete_tasks':
+			case 'done':
+			case 'mark':
+				$this->complete_tasks();
+				break;
+			
+			case 'hooks':
+				$this->hooks();
+				break;
+				
+			case 'clear':
+			case 'flush':
+			case 'cache':
+				$this->basecamp->cache->clean();
+				$this->clear();
+				exit("Cache cleared\n");
+				break;
+				
+			case 'todos':
+			case 'todo':
+			case 't':
+				$this->output_todos();
+				exit();
+				break;
+		}
+		
+		$this->header();
+		$this->input();
+		
+		exit(0);
+
+	}
+	
+	public function header() {
+		$reload = 'Reload';
+		$diff = strlen($this->subdomain) - strlen($reload);
+		if ( strlen($this->subdomain) < strlen($reload) ) {
+			$pad1 = str_pad('', abs($diff));
+		}else {
+			$pad2 = str_pad('', $diff);
+		}
+		
+		$this->clear();
+		
+		echo  $pad1.$this->subdomain;
+		if ( !empty($this->projectname) ) echo ': '.$this->projectname;
+		echo  "\n".$pad2."$reload: [p]roject  [c]ache  [s]ubdomain  [a]pi \n";
+	}
+	
+	public function hooks() {
+		
+		exec( 'if [ -d ./.git ]; then echo 1; else echo 0; fi', $is_git_root );
+		if ( $is_git_root[0] == '0' ) {
+			$this->clear();
+			echo "Please run $this->script_name hooks from the root of your git directory.\n";
+			exit;
+		}else {
+			$this->clear();
+			//exec('echo "base;" >> .git/hooks/pre-commit; chmod 755 .git/hooks/pre-commit;');
+			//echo "Pre-commit hook added.\n";
+			exec('echo "base complete_tasks;" >> .git/hooks/post-commit; chmod 755 .git/hooks/post-commit;');
+			echo "Post-commit hook added.\n";
+			exit;
+		}
+		
+	}
+		
+	public function maybe_reload( $input ) {
+		
+		$input = strtolower( $input[0] );
+		
+		switch ( $input ) {
+			case 'p':
+			case 'projects':
+				
+				exec('git config --unset basecamp.projectid');
+				unset( $this->project->name, $this->project->id );
+
+				break;
+			
+			case 'c':
+			case 'cache':
+			
+				$this->basecamp->cache->clean();
+			
+				break;
+				
+			case 's':
+			case 'subdomain':
+				exec( 'git config --global --unset basecamp.subdomain' );
+				unset( $this->subdomain );
+				break;
+				
+			case 'a':
+			case 'api':
+				exec( 'git config --global --unset basecamp.apitoken' );
+				unset( $this->apitoken );
+				break;
+			default:
+			
+				// If input not listed, don't continue to run() below.
+				return false;
+			
+				break;
+		}
+		
+		$this->run();
+		
+	}
+	
+	public function input($prompt='') {
+		echo "$prompt \n";
+		
+		$input = trim(fgets(STDIN));
+		
+		$this->maybe_reload( $input );
+		
+		return $input;
+	}
+	
+	public function clear($out = TRUE) {
+	    $clearscreen = chr(27)."[H".chr(27)."[2J";
+	    if ($out) print $clearscreen;
+	    else return $clearscreen;
+	}
+
+	public function set_project() {
+		foreach ($this->project_list as $key => $p ) {
+			echo "[$key] {$p['name']}\n";
+		}
+		$key = $this->input('Which project?');
+
+		$this->cache->set_project( $this->project_list[$key] );
+	}
+	
+	public function output_todos() {
+		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
+		
+		foreach ($lists as $list) {
+			echo "\n## $list->name\n";
+			
+			$list_items = $this->basecamp->list_items( $list->id )->xpath('//todo-item');
+			foreach ( $list_items as $item ) {
+				echo "# $item->id: $item->content\n";
+			}
+		}
+	}
+			
+	public function output_tasks() {
+		// Load Tasks
+		foreach ($this->tasks as $key => $task ) {
+			extract($task);
+			$out .= "$content $id\n";
+		}
+		// exec('echo "'.$out.'" | mate;');
+	
+		exec('echo "'.$out.'" | git commit --edit --file -');
+	}
+	
+	public function complete_tasks() {
+		exec( 'git log -n 1 --format=format:"%B"', $commit_message );
+		
+		foreach ( $commit_message as $line ) {
+			preg_match('/ ([0-9]{8})$/i', $line, $match);
+			if (!empty($match[1])) {
+				$tasks[] = $match[1];
+			}
+		}
+		
+		$this->clear();
+		
+		if (empty($tasks)) {
+			echo "No tasks found in last commit message.\n";
+			exit;	
+		}
+		
+		echo "Marking tasks complete... \n";
+		foreach ($tasks as $task_id) {
+			echo "$task_id... ";
+			if ( $this->basecamp->complete_task( $task_id ) ) {
+				echo "Done. \n";
+			}else {
+				echo "Failed. \n";
+			}
+		}
+
+		exit;
+	}
+	
+}
+
+?>
