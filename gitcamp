@@ -243,19 +243,36 @@ class GitCamp {
 	}
 	
 	// List all todo lists and items for current project
-	public function todo () {
+	public function todo() {
 		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
 		
 		if ( is_a($lists, 'SimpleXMLElement') ) { 
-			foreach ( $lists as $list) {
-				echo "\n# $list->name\n";
+			
+			$queries = array(
+			   	"\n## ASSIGNED TO ME ##\n"     => '//todo-item[completed="false" and responsible-party-id="'.$this->personid.'"]',
+			   	"\n## ASSIGNED TO ANYONE ##\n" => '//todo-item[completed="false" and not(responsible-party-id) ]',
+			);
+			
+			// Two sections of lists base on assignment
+			foreach ( $queries as $title => $query ) {
+				
+				echo $title;
+				
+				foreach ( $lists as $list) {
 
-				$list_items = $this->basecamp->list_items( $list->id )->xpath('//todo-item');
-				foreach ( $list_items as $item ) {
-					echo "# $item->content #{$item->id}t\n";
+					$list_items = $this->basecamp->list_items( $list->id )->xpath( $query );
+					if (empty($list_items)){ continue; }
+
+					echo "\n# $list->name\n";
+
+					foreach ( $list_items as $item ) {
+						$content = str_replace( "\n", ' ', $item->content );
+						echo "# $content #{$item->id}t\n";
+					}
+
+					$this->time_tracking_enable($list);
+					
 				}
-
-				$this->time_tracking_enable($list);
 			}
 		} 
 	}
