@@ -258,6 +258,10 @@ class Basecamp
 		return $this->hook("/projects/{$project_id}/time_entries.xml","time-entry");
 	}
 	
+	// Creates a new time entry for the given todo item.
+	function create_time_entry($project_id, $params) {
+		return $this->hook("/projects/{$project_id}/time_entries.xml",'time-entry', array('time-entry' => $params), 'POST');
+	}
 	
 	// Creates a new time entry for the given todo item.
 	function create_time_entry_for_item($item_id, $params) {
