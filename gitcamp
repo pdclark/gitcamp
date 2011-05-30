@@ -311,7 +311,35 @@ class GitCamp {
 			
 			exit("Commit from $source: Tasks and time entries are not proccessed.\n\n");
 		}
-
+		
+		// Find solo time entries
+		foreach ( $commit_message as $line ) {
+			if ($line[0] == '#') {continue;} // Comment
+			
+			preg_match('/
+				^                      # beginning of line
+				[\s]*                  # optional white space
+				t                      # t seperator
+				[\s]*                  # optional white space
+				([.0-9:]*)             # time entry (1)
+				[\s]*                  # optional white space
+				([a-z \d !-~ \s]*)     # description (2)
+				$                      # end of line
+			/ix',$line, $match);
+			
+			$task = array( 'time' => $match[1], 'description' => $match[2], );
+			
+			// Time Tracking
+			if ( !empty( $task['time'] ) ) {
+				$this->basecamp->create_time_entry( $this->project->id, array(
+					'person-id' => $this->personid,
+					'date' => date('Y-m-d'),
+					'hours' => $task['time'],
+					'description' => $task['description'],
+				));
+			}
+		}
+		
 		// Find todo entries
 		foreach ( $commit_message as $line ) {
 			if ($line[0] == '#') {continue;} // Comment
