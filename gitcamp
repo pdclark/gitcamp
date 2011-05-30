@@ -82,10 +82,18 @@ class GitCamp {
 				
 			default:
 				// Call class method by subcommand
-				if (method_exists($this, $this->method)) {
-					$method = $this->method;
-					$this->init();
-					$this->$method();
+				$method = $this->method;
+				
+				if (method_exists($this, $method) ) {
+					$refl = new ReflectionMethod($this, $method); 
+					if ( $refl->isPublic() ) {
+						$this->init();
+						$this->$method();
+					}else {
+						$this->help();
+					}
+				}else {
+					$this->help();
 				}
 				break;
 		}
