@@ -5,13 +5,15 @@ Script that loads Basecamp todo lists into Git commit messages, and marks todos 
 
 # Install #
 	
+Warning! Gitcamp overwrites `commit-msg` and `prepare-commit-msg` hooks when you run `gitcamp init`. If you're using those hooks for something fancy, back them up first.
+	
 	# Install Zend Framework
 	sudo pear channel-discover zend.googlecode.com/svn
 	sudo pear install zend/zend
 	
 	# Install gitcamp
-    git clone ssh://git@git.brainstormmedia.com/bsm/gitcamp.git ~/Sites/gitcamp;
-    echo "export PATH=~/Sites/gitcamp:$PATH" >> ~/.bash_profile;
+    git clone ssh://git@github.com:pdclark/Gitcamp.git ~/gitcamp;
+    echo "export PATH=~/gitcamp:$PATH" >> ~/.bash_profile;
     # Now run "gitcamp init" in a git repo
 
 
