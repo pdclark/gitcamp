@@ -111,16 +111,16 @@ class GitCamp {
 	// Setup
 	public function init() {
 		// Are we in a git repo?
-		unset($return);
-		exec('git status', $return, $exit);
-		if ( $exit !== 0 ) {
-			exit("Please run $this->script_name inside a git repository.\n");
+		unset($return); exec('git status >/dev/null 2>&1', $return, $exit);
+		$in_git_repo = ($exit === 0) ? true : false;
+		if ( !$in_git_repo && $this->method == 'init') {
+			exit("Please run $this->script_name init inside a git repository.\n");
 		}
 		
 		// Alias
 		unset($return);
 		exec('git config --get alias.camp', $return);
-		if (empty( $return ) ) {
+		if ( empty( $return ) ) {
 			exec( "git config --global alias.camp '!gitcamp $1'" );
 			$this->init();
 		}
@@ -170,7 +170,7 @@ class GitCamp {
 		exec('git config --get basecamp.projectid', $return);
 		$this->project->id = $return[0];
 		
-		if (empty( $this->project->id ) ) {
+		if ( $in_git_repo && empty( $this->project->id ) ) {
 			echo "Loading projects...\n";
 
 			// Show only active projects
@@ -244,7 +244,44 @@ class GitCamp {
 	
 	// List all todo lists and items for current project
 	public function todo() {
-		$lists = $this->basecamp->lists( $this->project->id, false); // complete = false
+		
+		if ( !empty( $this->project->id ) ) { 
+			
+			// In a Git Repo assigned to a specific project
+			$this->todo_output($this->project->id);
+			
+		}else {
+			// No project, list them all
+			
+			// Show only active projects
+			$projects = $this->basecamp->projects()->xpath('//project[status="active"]');
+
+			echo "\n";
+			foreach ( $projects as $key => $project ) {
+				
+				ob_start();
+				$this->todo_output( $project->id );
+				$tasks = ob_get_contents();
+				ob_end_clean();
+				
+				if ( !empty($tasks) ) {
+					
+					echo  "\n\n$project->name\n"
+					     . str_repeat( '-', strlen($project->name) ) . "\n"
+					     . str_replace("\n#", "\n  #", $tasks);
+				}
+				
+			}
+			echo "\n";
+			
+		}
+
+	}
+	
+	// List all todo lists and items for any project
+	private function todo_output( $project_id ) {
+		
+		$lists = $this->basecamp->lists( $project_id, false); // complete = false
 		
 		if ( is_a($lists, 'SimpleXMLElement') ) { 
 			
@@ -256,8 +293,7 @@ class GitCamp {
 			// Two sections of lists base on assignment
 			foreach ( $queries as $title => $query ) {
 				
-				echo $title;
-				
+				ob_start();
 				foreach ( $lists as $list) {
 
 					$list_items = $this->basecamp->list_items( $list->id )->xpath( $query );
@@ -273,8 +309,15 @@ class GitCamp {
 					$this->time_tracking_enable($list);
 					
 				}
+				$tasks = ob_get_contents();
+				ob_end_clean();
+				
+				if ( !empty($tasks) ) {
+					echo $title;
+					echo $tasks;
+				}
 			}
-		} 
+		}
 	}
 	
 	// Scan the last Git commit message for todo IDs and time entries
