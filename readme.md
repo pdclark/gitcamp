@@ -12,7 +12,7 @@ Warning! Gitcamp overwrites `commit-msg` and `prepare-commit-msg` hooks when you
 	sudo pear install zend/zend
 	
 	# Install gitcamp
-    git clone ssh://git@github.com:pdclark/Gitcamp.git ~/gitcamp;
+    git clone ssh://git@github.com/pdclark/Gitcamp.git ~/gitcamp;
     echo "export PATH=~/gitcamp:$PATH" >> ~/.bash_profile;
     # Now run "gitcamp init" in a git repo
 
